@@ -71,4 +71,4 @@ catch {
     Write-Error "Installation failed: $_"
     Write-Error $_.ScriptStackTrace
     exit 1
-}
+}git a
