@@ -5,7 +5,6 @@ Originally part of [dotfiles](https://github.com/yourusername/dotfiles)
 ## Use
 Just run the following to install everything you need on Windows:
 
-
-    ```bash
-    irm https://raw.githubusercontent.com/JDLanctot/windows-setup/main/bootstrap.ps1 | iex
-    ```
+```bash
+irm https://raw.githubusercontent.com/JDLanctot/windows-setup/main/bootstrap.ps1 | iex
+```
