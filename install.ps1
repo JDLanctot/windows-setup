@@ -66,8 +66,6 @@ try {
     if (-not $result) {
         throw "Installation failed without specific error"
     }
-
-    return $result
 }
 catch {
     Write-Error "Installation failed: $_"
