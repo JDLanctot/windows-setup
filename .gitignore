@@ -1,0 +1,15 @@
+*.log
+*.tmp
+*.txt
+/tmp
+.env
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+/test-results/
+/coverage/
