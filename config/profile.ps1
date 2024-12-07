@@ -8,11 +8,16 @@ Import-Module PSFzf
 Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
 Set-PsFzfOption -EnableFuzzySort
 
+# Faster moving
 function .. { Set-Location .. }
 function ... { Set-Location ../.. }
 function .... { Set-Location ../../.. }
+
+# Improved FzF
 function fzn {nvim $(fzf --preview="bat --color=always {}")}
 function fzc {code $(fzf --preview="bat --color=always {}")}
+
+# Conda
 function ca {
     param([string]$envName)
     conda activate $envName
@@ -23,6 +28,28 @@ function caz {
     conda activate $envName
 }
 
+# Enhanced Listing
+function ll {eza -ll}
+function la {eza -la}
+
+# Git Shortcuts
+function gs { git status }
+function ga { git add . }
+function gc { param($m) git commit -m "$m" }
+function gp { git push }
+function g { __zoxide_z github }
+function gcl { git clone "$args" }
+function gcom {
+    git add .
+    git commit -m "$args"
+}
+
+# Quick Access to System Information
+function sysinfo { Get-ComputerInfo }
+
+# Clipboard Utilities
+function cpy { Set-Clipboard $args[0] }
+function pst { Get-Clipboard }
 
 $env:FZF_DEFAULT_COMMAND = 'ag --hidden --ignore .git -l -g ""'
 
