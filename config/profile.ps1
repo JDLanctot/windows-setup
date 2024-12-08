@@ -51,6 +51,9 @@ function sysinfo { Get-ComputerInfo }
 function cpy { Set-Clipboard $args[0] }
 function pst { Get-Clipboard }
 
+# Neofetch
+function ff { fastfetch }
+
 $env:FZF_DEFAULT_COMMAND = 'ag --hidden --ignore .git -l -g ""'
 
 Register-ArgumentCompleter -CommandName 'datree' -ScriptBlock {
