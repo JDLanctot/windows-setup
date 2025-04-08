@@ -408,6 +408,32 @@ Set-Alias vim nvim
             )
             Order = 4
         }
+        # New bundles
+        'DeepLearning' = @{
+            Steps = @(
+                @{ Name = "Conda"; Function = "Install-Conda"; Required = $true }
+            )
+            Order = 5
+            Description = "Tools for deep learning and data science"
+        }
+        'WebDev' = @{
+            Steps = @(
+                @{ Name = "Node"; Function = "Install-Node"; Required = $true }
+                @{ Name = "PNPM"; Function = "Install-PNPM"; Required = $true }
+                @{ Name = "Vscode"; Function = "Install-VSCode"; Required = $true }
+            )
+            Order = 6
+            Description = "Web development environment"
+        }
+        'JuliaDev' = @{
+            Steps = @(
+                @{ Name = "Julia"; Function = "Install-Julia"; Required = $true }
+                @{ Name = "VSCode"; Function = "Install-VSCode"; Required = $false }
+                @{ Name = "JuliaExtension"; Function = "Install-JuliaExtension"; Required = $false }
+            )
+            Order = 7
+            Description = "Julia development environment"
+        }
     }
 
     InstallationProfiles  = @{
@@ -425,9 +451,32 @@ Set-Alias vim nvim
         }
         Full     = @{
             InheritFrom     = "Standard"
+            Groups          = @('DeepLearning', 'WebDev', 'JuliaDev')
             MakeAllRequired = $true
             Parallel        = $false
             ParallelGroups  = @('Development', 'Tools')
+        }
+        # New specialized profiles
+        DataScience = @{
+            InheritFrom = "Minimal"
+            Groups = @('DeepLearning')
+            AdditionalSteps = @(
+                @{ Name = "Dotfiles"; Function = "Install-Dotfiles"; Required = $true }
+            )
+        }
+        WebDevelopment = @{
+            InheritFrom = "Minimal"
+            Groups = @('WebDev')
+            AdditionalSteps = @(
+                @{ Name = "Dotfiles"; Function = "Install-Dotfiles"; Required = $true }
+            )
+        }
+        JuliaDevelopment = @{
+            InheritFrom = "Minimal"
+            Groups = @('JuliaDev')
+            AdditionalSteps = @(
+                @{ Name = "Dotfiles"; Function = "Install-Dotfiles"; Required = $true }
+            )
         }
     }
 

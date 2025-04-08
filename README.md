@@ -1,10 +1,11 @@
-## Windows Setup
-Windows configuration and setup is now maintained in [windows-setup](https://github.com/yourusername/windows-setup)
-Originally part of [dotfiles](https://github.com/yourusername/dotfiles)
+# Windows Setup Module
 
-## Use
-Just run the following to install everything you need on Windows:
+An automated setup tool for Windows development environments. This module streamlines the installation of development tools, utilities, and configurations to get you up and running quickly.
 
-```bash
+## Quick Start
+
+Run the following command in PowerShell to install with the standard profile:
+
+```powershell
 irm https://raw.githubusercontent.com/JDLanctot/windows-setup/main/bootstrap.ps1 | iex
 ```

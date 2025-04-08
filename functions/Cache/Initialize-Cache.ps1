@@ -6,5 +6,10 @@ function Initialize-Cache {
         New-Item -ItemType Directory -Path $CachePath -Force | Out-Null
     }
     $script:CACHE_PATH = $CachePath
+
+    if (-not $script:Silent) {
+        Write-Log "Cache initialized successfully" -Level "SUCCESS"
+    }
+    
     return $true
 }

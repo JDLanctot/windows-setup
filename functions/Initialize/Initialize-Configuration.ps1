@@ -8,6 +8,10 @@ function Initialize-Configuration {
         $configPath = Join-Path $script:CONFIG_ROOT "config.psd1"
         
         # Import and validate configuration
+        if (-not (Test-Path $configPath)) {
+            throw "Configuration file not found at: $configPath"
+        }
+        
         $loadedConfig = Import-PowerShellDataFile -Path $configPath -ErrorAction Stop
         
         # Replace placeholders with actual values
@@ -21,7 +25,11 @@ function Initialize-Configuration {
         # Function to recursively process hashtables and arrays
         function Update-ConfigValues {
             param($InputObject)
-            if ($InputObject -is [System.Collections.IDictionary]) {
+            
+            if ($null -eq $InputObject) {
+                return $null
+            }
+            elseif ($InputObject -is [System.Collections.IDictionary]) {
                 $newHash = @{}
                 foreach ($key in $InputObject.Keys) {
                     $newHash[$key] = Update-ConfigValues $InputObject[$key]
@@ -83,7 +91,6 @@ function Initialize-Configuration {
                 throw "Missing PreInstall in ConfigurationHandler: $handler"
             }
         }
-
 
         # Validate InstallationGroups
         foreach ($group in $loadedConfig.InstallationGroups.Keys) {
@@ -147,16 +154,21 @@ function Initialize-Configuration {
             if ($thisProfile.InheritFrom) {
                 $baseProfile = $loadedConfig.InstallationProfiles[$thisProfile.InheritFrom]
                 if ($baseProfile) {
-                    $thisProfile.Groups = @($basethisProfile.Groups) + @($thisProfile.Groups) | Select-Object -Unique
+                    # Handle group inheritance
+                    if ($baseProfile.Groups -and $thisProfile.Groups) {
+                        $thisProfile.Groups = @($baseProfile.Groups) + @($thisProfile.Groups) | Select-Object -Unique
+                    }
+                    elseif ($baseProfile.Groups) {
+                        $thisProfile.Groups = $baseProfile.Groups
+                    }
+                    
+                    # Apply MakeAllRequired if specified
                     if ($thisProfile.MakeAllRequired) {
                         foreach ($group in $thisProfile.Groups) {
                             $groupConfig = $loadedConfig.InstallationGroups[$group]
                             if ($groupConfig) {
-                                foreach ($component in $groupConfig.Components) {
-                                    $program = $loadedConfig.Programs | Where-Object { $_.Name -eq $component }
-                                    if ($program) {
-                                        $program.InstallSpec.Required = $true
-                                    }
+                                foreach ($step in $groupConfig.Steps) {
+                                    $step.Required = $true
                                 }
                             }
                         }
@@ -165,7 +177,12 @@ function Initialize-Configuration {
             }
         }
 
+        # Set global config paths so they're accessible to other functions
+        $script:CONFIG_PATHS = $loadedConfig.Paths
+        
+        # Store configuration globally
         $script:Config = $loadedConfig
+        
         if (-not $script:Silent) {
             Write-Log "Configuration loaded successfully" -Level "SUCCESS"
         }

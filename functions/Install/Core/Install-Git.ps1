@@ -34,7 +34,9 @@ function Install-Git {
             # Setup SSH directory if needed
             $sshDir = "$env:USERPROFILE\.ssh"
             if (-not (Test-Path $sshDir)) {
+                Write-ColorOutput "Creating SSH directory at $sshDir" "Status"
                 New-Item -ItemType Directory -Path $sshDir -Force | Out-Null
+                
                 # Set appropriate permissions on .ssh directory
                 $acl = Get-Acl $sshDir
                 $acl.SetAccessRuleProtection($true, $false)
@@ -66,8 +68,33 @@ function Install-Git {
             $gitCredential = $storedCred
         }
         else {
-            $GIT_EMAIL = Read-Host "Enter your Git email"
-            $GIT_NAME = Read-Host "Enter your Git name"
+            # Show a clear explanation of what we're asking for
+            Write-Host "`n╔════════════════════════════════════════════════════════════════╗"
+            Write-Host "║             Git Configuration Required                          ║"
+            Write-Host "╠════════════════════════════════════════════════════════════════╣"
+            Write-Host "║ Please provide your Git user information.                       ║"
+            Write-Host "║ This will be used for commit attribution in Git repositories.   ║"
+            Write-Host "╚════════════════════════════════════════════════════════════════╝"
+            
+            # Prompt for email with validation
+            do {
+                $GIT_EMAIL = Read-Host "Enter your Git email address"
+                $validEmail = $GIT_EMAIL -match "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+                
+                if (-not $validEmail -and -not [string]::IsNullOrWhiteSpace($GIT_EMAIL)) {
+                    Write-ColorOutput "Invalid email format. Please enter a valid email address." "Warning"
+                }
+            } while (-not $validEmail -and -not [string]::IsNullOrWhiteSpace($GIT_EMAIL))
+            
+            # Prompt for name with validation
+            do {
+                $GIT_NAME = Read-Host "Enter your Git display name"
+                $validName = -not [string]::IsNullOrWhiteSpace($GIT_NAME)
+                
+                if (-not $validName) {
+                    Write-ColorOutput "Name cannot be empty. Please enter your name." "Warning"
+                }
+            } while (-not $validName)
             
             if ([string]::IsNullOrWhiteSpace($GIT_EMAIL) -or [string]::IsNullOrWhiteSpace($GIT_NAME)) {
                 Write-ColorOutput "Git email and name are required" "Error"
@@ -85,6 +112,10 @@ function Install-Git {
         }
 
         # Configure Git
+        Write-ColorOutput "Configuring Git with:" "Status"
+        Write-ColorOutput "  Name: $($gitCredential.Username)" "Status"
+        Write-ColorOutput "  Email: $($gitCredential.Email)" "Status"
+        
         Invoke-SafeCommand { 
             git config --global user.email $gitCredential.Email
             git config --global user.name $gitCredential.Username
@@ -98,7 +129,9 @@ function Install-Git {
         # Setup SSH directory if needed
         $sshDir = "$env:USERPROFILE\.ssh"
         if (-not (Test-Path $sshDir)) {
+            Write-ColorOutput "Creating SSH directory for Git at $sshDir" "Status"
             New-Item -ItemType Directory -Path $sshDir -Force | Out-Null
+            
             # Set appropriate permissions on .ssh directory
             $acl = Get-Acl $sshDir
             $acl.SetAccessRuleProtection($true, $false)
@@ -123,7 +156,7 @@ function Install-Git {
         return $didConfigureSomething
     }
     catch {
-        Handle-Error -ErrorRecord $_ `
+        Resolve-Error -ErrorRecord $_ `
             -ComponentName "Git Environment" `
             -Operation "Setup" `
             -Critical

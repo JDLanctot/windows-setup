@@ -1,4 +1,4 @@
-function Handle-Error {
+function Resolve-Error {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -23,6 +23,9 @@ function Handle-Error {
             Timestamp  = Get-Date
         }
 
+        # Check for common errors and suggest recovery
+        $recoverySteps = Get-ErrorRecoverySteps -ErrorRecord $ErrorRecord -ComponentName $ComponentName
+        
         # Log structured error
         Write-StructuredLog -Message "Error in $Operation" `
             -Level "ERROR" `
@@ -31,9 +34,26 @@ function Handle-Error {
 
         # Handle critical errors
         if ($Critical) {
-            Write-Log "CRITICAL ERROR: Operation cannot continue" -Level "ERROR"
+            Write-Log "CRITICAL ERROR: $($errorDetails.Message)" -Level "ERROR"
+            
+            if ($recoverySteps) {
+                Write-Log "Suggested recovery:" -Level "INFO"
+                foreach ($step in $recoverySteps) {
+                    Write-Log " - $step" -Level "INFO"
+                }
+            }
+            
             if (-not $Continue) {
                 throw $ErrorRecord
+            }
+        }
+        else {
+            Write-Log "NON-CRITICAL ERROR: $($errorDetails.Message)" -Level "WARN"
+            if ($recoverySteps) {
+                Write-Log "Suggested recovery:" -Level "INFO"
+                foreach ($step in $recoverySteps) {
+                    Write-Log " - $step" -Level "INFO"
+                }
             }
         }
 
