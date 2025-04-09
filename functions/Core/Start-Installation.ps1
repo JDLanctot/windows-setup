@@ -1,12 +1,14 @@
 function Start-Installation {
     [CmdletBinding()]
     param(
-        [ValidateSet('Minimal', 'Standard', 'Full', 'DataScience', 'WebDevelopment', 'JuliaDevelopment')]
+        [ValidateSet('Minimal', 'Standard', 'Full', 'DataScience', 'WebDevelopment', 'JuliaDevelopment', 'Custom')]
         [string]$InstallationType = 'Standard',
         [switch]$Force,
         [switch]$NoBackup,
         [switch]$Silent,
-        [switch]$Interactive
+        [switch]$Interactive,
+        [string[]]$CustomComponents,
+        [switch]$Initialize
     )
     
     try {
@@ -21,10 +23,13 @@ function Start-Installation {
         $configToUse = if ($script:Config) { $script:Config } else { $initResult.Config }
         if (-not $configToUse) { throw "No configuration available" }
         
-        # Get installation profile
-        $thisProfile = $configToUse.InstallationProfiles[$InstallationType]
-        if (-not $thisProfile) { throw "Invalid installation profile: $InstallationType" }
-
+        # If Initialize switch is specified, just return the configuration
+        if ($Initialize) {
+            return @{
+                Config = $configToUse
+            }
+        }
+        
         # Initialize results tracking
         $results = @{
             Total           = 0
@@ -34,117 +39,192 @@ function Start-Installation {
             ComponentStatus = @{}  # Initialize ComponentStatus
         }
 
-        # Get all available groups for this profile
-        $availableGroups = @()
-        
-        # Add groups from the profile
-        if ($thisProfile.Groups) {
-            $availableGroups += $thisProfile.Groups
-        }
-        
-        # Add inherited groups
-        if ($thisProfile.InheritFrom) {
-            $baseProfile = $configToUse.InstallationProfiles[$thisProfile.InheritFrom]
-            if ($baseProfile -and $baseProfile.Groups) {
-                $availableGroups += $baseProfile.Groups
-            }
-        }
-        
-        # Remove duplicates
-        $availableGroups = $availableGroups | Select-Object -Unique
-
-        # Add debug logging for troubleshooting
-        Write-Log "Available groups for profile ${InstallationType}: $($availableGroups -join ', ')" -Level "DEBUG"
-
-        # If interactive mode is requested, provide clear instructions
-        if ($Interactive) {
-            Write-Host "`n╔════════════════════════════════════════════════════════════════╗"
-            Write-Host "║            Interactive Component Selection Mode                 ║"
-            Write-Host "╠════════════════════════════════════════════════════════════════╣"
-            Write-Host "║ You'll be prompted to select which components to install.       ║"
-            Write-Host "║ Required components will be installed automatically.            ║"
-            Write-Host "╚════════════════════════════════════════════════════════════════╝"
-            
-            $selectedComponents = Select-InstallationComponents -ProfileName $InstallationType -Config $configToUse
-            if ($selectedComponents.Count -eq 0) {
-                Write-ColorOutput "No components selected. Installation cancelled." "Warning"
-                return $false
-            }
-        }
-
-        # Get all steps from groups
-        $allSteps = [System.Collections.ArrayList]::new()
-        
-        # Add group-based installations
-        foreach ($groupName in $availableGroups) {
-            $group = $configToUse.InstallationGroups[$groupName]
-            if (-not $group) { 
-                Write-Log "Group not found in configuration: $groupName" -Level "WARN"
-                continue 
+        # Handle custom installation type
+        if ($InstallationType -eq 'Custom') {
+            if (-not $CustomComponents -or $CustomComponents.Count -eq 0) {
+                throw "Custom installation selected but no components specified"
             }
             
-            Write-Log "Processing group: $groupName with $($group.Steps.Count) steps" -Level "DEBUG"
+            Write-Log "Processing custom installation with components: $($CustomComponents -join ', ')" -Level "INFO"
             
-            foreach ($step in $group.Steps) {
-                if (-not $step.Name) {
-                    Write-Log "Step without a name found in group $groupName" -Level "WARN"
-                    continue
+            # Create all steps from all groups
+            $allSteps = [System.Collections.ArrayList]::new()
+            
+            # Process all installation groups to find components
+            foreach ($groupName in $configToUse.InstallationGroups.Keys) {
+                $group = $configToUse.InstallationGroups[$groupName]
+                if (-not $group) { continue }
+                
+                foreach ($step in $group.Steps) {
+                    if (-not $step.Name) { continue }
+                    
+                    # Include if required or specifically selected
+                    if ($step.Required -or $CustomComponents -contains $step.Name) {
+                        $componentSpec = @{
+                            Name     = $step.Name
+                            Function = $step.Function
+                            Group    = $groupName
+                            Order    = $group.Order
+                            Required = $step.Required -eq $true
+                        }
+                        
+                        [void]$allSteps.Add($componentSpec)
+                    }
                 }
-                
-                Write-Log "Processing step: $($step.Name) from group $groupName" -Level "DEBUG"
-                
-                $componentSpec = @{
-                    Name        = $step.Name
-                    Function    = $step.Function
-                    Group       = $groupName
-                    Order       = $group.Order
-                    Required    = $step.Required -eq $true
-                }
-                
-                # Make all components required if profile specifies it
-                if ($thisProfile.MakeAllRequired) {
-                    $componentSpec.Required = $true
-                }
-                
-                # If interactive and component not selected, skip
-                if ($Interactive -and $step.Name -notin $selectedComponents -and -not $step.Required) {
-                    Write-Log "Skipping step $($step.Name) (not selected)" -Level "DEBUG"
-                    continue
-                }
-                
-                [void]$allSteps.Add($componentSpec)
-                Write-Log "Added step: $($step.Name)" -Level "DEBUG"
             }
+            
+            # Add special component "Dotfiles" if selected
+            if ($CustomComponents -contains "Dotfiles") {
+                [void]$allSteps.Add(@{
+                    Name     = "Dotfiles"
+                    Function = "Install-Dotfiles"
+                    Group    = "Core"
+                    Order    = 99
+                    Required = $false
+                })
+            }
+            
+            # Sort steps by dependencies and order
+            $orderedSteps = $allSteps | Sort-Object { 
+                $step = $_
+                $dependency = $configToUse.Dependencies[$step.Name]
+                if ($dependency) {
+                    @($dependency.Requires).Count
+                } else {
+                    0
+                }
+            } | Sort-Object { $_.Order }
+        }
+        else {
+            # Get installation profile for predefined types
+            $thisProfile = $configToUse.InstallationProfiles[$InstallationType]
+            if (-not $thisProfile) { throw "Invalid installation profile: $InstallationType" }
+
+            # Get all available groups for this profile
+            $availableGroups = @()
+            
+            # Add groups from the profile
+            if ($thisProfile.Groups) {
+                $availableGroups += $thisProfile.Groups
+            }
+            
+            # Add inherited groups
+            if ($thisProfile.InheritFrom) {
+                $baseProfile = $configToUse.InstallationProfiles[$thisProfile.InheritFrom]
+                if ($baseProfile -and $baseProfile.Groups) {
+                    $availableGroups += $baseProfile.Groups
+                }
+            }
+            
+            # Remove duplicates
+            $availableGroups = $availableGroups | Select-Object -Unique
+
+            # Add debug logging for troubleshooting
+            Write-Log "Available groups for profile ${InstallationType}: $($availableGroups -join ', ')" -Level "DEBUG"
+
+            # If interactive mode is requested, provide clear instructions
+            if ($Interactive) {
+                Write-Host "`n╔════════════════════════════════════════════════════════════════╗"
+                Write-Host "║            Interactive Component Selection Mode                 ║"
+                Write-Host "╠════════════════════════════════════════════════════════════════╣"
+                Write-Host "║ You'll be prompted to select which components to install.       ║"
+                Write-Host "║ Required components will be installed automatically.            ║"
+                Write-Host "╚════════════════════════════════════════════════════════════════╝"
+                
+                $selectedComponents = Select-InstallationComponents -ProfileName $InstallationType -Config $configToUse
+                if ($selectedComponents.Count -eq 0) {
+                    Write-ColorOutput "No components selected. Installation cancelled." "Warning"
+                    return $false
+                }
+            }
+
+            # Get all steps from groups
+            $allSteps = [System.Collections.ArrayList]::new()
+            
+            # Add group-based installations
+            foreach ($groupName in $availableGroups) {
+                $group = $configToUse.InstallationGroups[$groupName]
+                if (-not $group) { 
+                    Write-Log "Group not found in configuration: $groupName" -Level "WARN"
+                    continue 
+                }
+                
+                Write-Log "Processing group: $groupName with $($group.Steps.Count) steps" -Level "DEBUG"
+                
+                foreach ($step in $group.Steps) {
+                    if (-not $step.Name) {
+                        Write-Log "Step without a name found in group $groupName" -Level "WARN"
+                        continue
+                    }
+                    
+                    Write-Log "Processing step: $($step.Name) from group $groupName" -Level "DEBUG"
+                    
+                    $componentSpec = @{
+                        Name        = $step.Name
+                        Function    = $step.Function
+                        Group       = $groupName
+                        Order       = $group.Order
+                        Required    = $step.Required -eq $true
+                    }
+                    
+                    # Make all components required if profile specifies it
+                    if ($thisProfile.MakeAllRequired) {
+                        $componentSpec.Required = $true
+                    }
+                    
+                    # If interactive and component not selected, skip
+                    if ($Interactive -and $step.Name -notin $selectedComponents -and -not $step.Required) {
+                        Write-Log "Skipping step $($step.Name) (not selected)" -Level "DEBUG"
+                        continue
+                    }
+                    
+                    [void]$allSteps.Add($componentSpec)
+                    Write-Log "Added step: $($step.Name)" -Level "DEBUG"
+                }
+            }
+
+            # Add additional steps from profile
+            if ($thisProfile.AdditionalSteps) {
+                Write-Log "Processing additional steps from profile" -Level "DEBUG"
+                
+                foreach($step in $thisProfile.AdditionalSteps) {
+                    if (-not $step.Name) {
+                        Write-Log "Additional step without a name found" -Level "WARN"
+                        continue
+                    }
+                    
+                    Write-Log "Processing additional step: $($step.Name)" -Level "DEBUG"
+                    
+                    # Skip if interactive and not selected
+                    if ($Interactive -and $step.Name -notin $selectedComponents -and -not $step.Required) {
+                        Write-Log "Skipping additional step $($step.Name) (not selected)" -Level "DEBUG"
+                        continue
+                    }
+                    
+                    [void]$allSteps.Add($step)
+                    Write-Log "Added additional step: $($step.Name)" -Level "DEBUG"
+                }
+            }
+
+            # Sort steps - first by dependencies, then by order
+            $orderedSteps = $allSteps | Sort-Object { 
+                $step = $_
+                $dependency = $configToUse.Dependencies[$step.Name]
+                if ($dependency) {
+                    @($dependency.Requires).Count
+                } else {
+                    0
+                }
+            } | Sort-Object { $_.Order }
         }
 
-        # Add additional steps from profile
-        if ($thisProfile.AdditionalSteps) {
-            Write-Log "Processing additional steps from profile" -Level "DEBUG"
-            
-            foreach($step in $thisProfile.AdditionalSteps) {
-                if (-not $step.Name) {
-                    Write-Log "Additional step without a name found" -Level "WARN"
-                    continue
-                }
-                
-                Write-Log "Processing additional step: $($step.Name)" -Level "DEBUG"
-                
-                # Skip if interactive and not selected
-                if ($Interactive -and $step.Name -notin $selectedComponents -and -not $step.Required) {
-                    Write-Log "Skipping additional step $($step.Name) (not selected)" -Level "DEBUG"
-                    continue
-                }
-                
-                [void]$allSteps.Add($step)
-                Write-Log "Added additional step: $($step.Name)" -Level "DEBUG"
-            }
+        # Log ordered steps for debugging
+        Write-Log "Total ordered steps: $($orderedSteps.Count)" -Level "DEBUG"
+        foreach ($step in $orderedSteps) {
+            Write-Log "Ordered step: Name=$($step.Name), Function=$($step.Function), Group=$($step.Group)" -Level "DEBUG"
         }
 
-        # Log collected steps for debugging
-        Write-Log "Total steps collected: $($allSteps.Count)" -Level "DEBUG"
-        foreach ($step in $allSteps) {
-            Write-Log "Step in allSteps: Name=$($step.Name), Function=$($step.Function), Group=$($step.Group)" -Level "DEBUG"
-        }
+        $results.Total = $orderedSteps.Count
 
         # Sort steps - first by dependencies, then by order
         $orderedSteps = $allSteps | Sort-Object { 
