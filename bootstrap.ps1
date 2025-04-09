@@ -3,7 +3,12 @@
 # Create temporary directory
 $setupDir = "$env:TEMP\windows-setup"
 if (Test-Path $setupDir) {
-    Remove-Item -Path $setupDir -Recurse -Force
+    try {
+        Remove-Item -Path $setupDir -Recurse -Force -ErrorAction Stop
+    }
+    catch {
+        Write-Host "Warning: Could not remove existing directory. Will try to use it anyway."
+    }
 }
 New-Item -ItemType Directory -Path $setupDir -Force | Out-Null
 
@@ -23,4 +28,9 @@ Set-Location $extractedDir
 
 # Cleanup
 Set-Location $env:USERPROFILE
-Remove-Item -Path $setupDir -Recurse -Force
+try {
+    Remove-Item -Path $setupDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+catch {
+    Write-Host "Warning: Could not clean up temp directory. You may want to manually delete: $setupDir"
+}

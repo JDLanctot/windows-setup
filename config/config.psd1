@@ -24,7 +24,6 @@
 
     ConfigurationHandlers = @{
         'alacritty' = @{
-            PreInstall  = 'New-Item -ItemType Directory -Force'
             PostInstall = @{
                 Files = @(
                     @{Source = 'alacritty.toml'; Target = 'alacritty.toml' }
@@ -33,11 +32,9 @@
             }
         }
         'neovim'    = @{
-            PreInstall = 'New-Item -ItemType Directory -Force'
             CopyMode   = 'directory'
         }
         'default'   = @{
-            PreInstall = 'New-Item -ItemType Directory -Force'
             CopyMode   = 'file'
         }
     }

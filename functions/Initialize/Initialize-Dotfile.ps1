@@ -19,31 +19,34 @@ function Initialize-Dotfile {
             throw "No configuration handler found for $Name"
         }
 
+        # Get target path for use in all operations
+        $targetPath = $config.target
+        $targetDir = Split-Path $targetPath -Parent
+
+        # Create target directory if it doesn't exist
+        if (-not (Test-Path $targetDir)) {
+            Write-Log "Creating directory for configuration: $targetDir" -Level "INFO"
+            New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
+        }
+
         # Build InstallSpec from configuration
         $installSpec = @{
             Type          = 'custom'
             Required      = $false
             Name          = "${Name}-config"
-            PreInstall    = $handler.PreInstall
+            # No PreInstall property anymore
             CustomInstall = {
                 # Note: Within ScriptBlocks, we need to use Write-Log instead of Write-ColorOutput
                 # since functions defined in the parent scope aren't available in ScriptBlock context
                 $sourcePath = Join-Path $TempPath $config.source
                 $targetPath = $config.target
 
-                # Ensure target directory exists
-                $targetDir = Split-Path $targetPath -Parent
-                if (-not (Test-Path $targetDir)) {
-                    Write-Log "Creating directory for configuration: $targetDir" -Level "INFO"
-                    New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
-                }
-
                 if (-not (Test-Path $sourcePath)) {
                     Write-Log "Configuration not found in dotfiles at $sourcePath" -Level "ERROR"
                     return $false
                 }
 
-                # Handle file copying based on handler type
+                # Handler-specific file copying logic continues as in the original
                 if ($handler.PostInstall.Files) {
                     foreach ($file in $handler.PostInstall.Files) {
                         $sourceFile = $file.Source

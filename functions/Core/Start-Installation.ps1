@@ -165,13 +165,14 @@ function Start-Installation {
 
         $results.Total = $orderedSteps.Count
 
-        # Check if ProgressUI class exists before trying to create an instance
+        # In Start-Installation function
         $useProgressUI = $false
         try {
-            $progressUIType = [ProgressUI]
-            $progressUI = [ProgressUI]::new()
-            $useProgressUI = $true
-            Write-Log "ProgressUI initialized successfully" -Level "DEBUG"
+            if ([type]::GetType('ProgressUI')) {
+                $progressUI = New-Object ProgressUI
+                $useProgressUI = $true
+                Write-Log "ProgressUI initialized successfully" -Level "DEBUG"
+            }
         }
         catch {
             Write-Log "Progress UI not available, using simple progress: $_" -Level "WARN"

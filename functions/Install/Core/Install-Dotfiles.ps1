@@ -11,6 +11,7 @@ function Install-Dotfiles {
         }
 
         # Clone dotfiles repository
+        Write-Log "Cloning dotfiles repository to $tempPath" -Level "INFO"
         git clone https://github.com/JDLanctot/dotfiles.git $tempPath
         
         if (-not (Test-Path $tempPath)) {
@@ -22,6 +23,8 @@ function Install-Dotfiles {
         if ($script:CONFIG_PATHS) {
             foreach ($configName in $script:CONFIG_PATHS.Keys) {
                 Write-ColorOutput "Installing ${configName} configuration..." "Status"
+                Write-Log "Config path: $($script:CONFIG_PATHS[$configName])" -Level "DEBUG"
+                
                 if (-not (Initialize-Dotfile -Name $configName -TempPath $tempPath)) {
                     $success = $false
                     Write-ColorOutput "Failed to install ${configName} configuration" "Error"
@@ -40,7 +43,7 @@ function Install-Dotfiles {
         return $success
     }
     catch {
-        Write-ColorOutput "Failed to install dotfiles: $_" "Error"
+        Write-Log "Failed to install dotfiles: $_" -Level "ERROR"
         if (Test-Path $tempPath) {
             Remove-Item $tempPath -Recurse -Force
         }
