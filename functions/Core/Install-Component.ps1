@@ -235,7 +235,7 @@ function Install-Component {
             }
             else {
                 # Final error handling with our enhanced error handler
-                Write-ErrorReport -ErrorRecord $lastError `
+                Resolve-Error -ErrorRecord $lastError `
                     -ComponentName $Name `
                     -Operation "Installation" `
                     -InstallSpec $InstallSpec `

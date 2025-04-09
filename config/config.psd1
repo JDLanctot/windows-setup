@@ -41,13 +41,13 @@
 
     Paths                 = @{
         'nvim'       = @{
-            'source'  = 'config\nvim'
+            'source'  = '.config\nvim'
             'target'  = 'nvim'
             'type'    = 'directory'
             'handler' = 'neovim'
         }
         'bat'        = @{
-            'source'  = 'config\bat\config'
+            'source'  = '.config\bat\config'
             'target'  = 'bat\config'
             'type'    = 'file'
             'handler' = 'default'
@@ -59,7 +59,7 @@
             'handler' = 'default'
         }
         'powershell' = @{
-            'source'  = '.windows\profile.ps1'
+            'source'  = '.windows\powershell\profile.ps1'
             'target'  = 'profile.ps1'
             'type'    = 'file'
             'handler' = 'default'
@@ -78,7 +78,7 @@
             'colorscheme' = 'rose-pine-moon'
         }
         'glazewm'    = @{
-            'source'  = '.config\glazewm\config.yaml'
+            'source'  = '.windows\.glzr\glazewm\config.yaml'
             'target'  = '.glzr\glazewm\config.yaml'
             'type'    = 'file'
             'handler' = 'default'

@@ -14,12 +14,15 @@ function Initialize-Dotfile {
         }
 
         $config = $script:CONFIG_PATHS[$Name]
+        Write-Log "Processing config for $Name with target path $($config.target)" -Level "DEBUG"
+        
         $handler = $script:Config.ConfigurationHandlers[$config.handler ?? 'default']
         if (-not $handler) {
             throw "No configuration handler found for $Name"
         }
 
-        # Get target path for use in all operations
+        # Get source and target paths
+        $sourcePath = Join-Path $TempPath $config.source
         $targetPath = $config.target
         $targetDir = Split-Path $targetPath -Parent
 
@@ -29,127 +32,115 @@ function Initialize-Dotfile {
             New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
         }
 
-        # Build InstallSpec from configuration
-        $installSpec = @{
-            Type          = 'custom'
-            Required      = $false
-            Name          = "${Name}-config"
-            # No PreInstall property anymore
-            CustomInstall = {
-                # Note: Within ScriptBlocks, we need to use Write-Log instead of Write-ColorOutput
-                # since functions defined in the parent scope aren't available in ScriptBlock context
-                $sourcePath = Join-Path $TempPath $config.source
-                $targetPath = $config.target
+        # Check source path exists
+        if (-not (Test-Path $sourcePath)) {
+            Write-Log "Source path not found: $sourcePath" -Level "WARN"
+            # Skip instead of failing for missing config files
+            # This allows the installation to continue with available configs
+            return $false
+        }
 
-                if (-not (Test-Path $sourcePath)) {
-                    Write-Log "Configuration not found in dotfiles at $sourcePath" -Level "ERROR"
-                    return $false
-                }
+        $success = $false
+        
+        try {
+            # Use file-specific copying if specified
+            if ($handler.PostInstall.Files) {
+                Write-Log "Using file-specific copy for $Name" -Level "DEBUG"
+                $filesCopied = 0
+                
+                foreach ($file in $handler.PostInstall.Files) {
+                    $sourceFile = $file.Source
+                    $targetFile = $file.Target
 
-                # Handler-specific file copying logic continues as in the original
-                if ($handler.PostInstall.Files) {
-                    foreach ($file in $handler.PostInstall.Files) {
-                        $sourceFile = $file.Source
-                        $targetFile = $file.Target
-
-                        # Replace variables in file names
-                        if ($config.colorscheme) {
-                            $sourceFile = $sourceFile.Replace('{colorscheme}', $config.colorscheme)
-                            $targetFile = $targetFile.Replace('{colorscheme}', $config.colorscheme)
-                        }
-
-                        $sourceFilePath = Join-Path $sourcePath $sourceFile
-                        $targetFilePath = Join-Path $targetPath $targetFile
-
-                        if (Test-Path $sourceFilePath) {
-                            # Create target directory if it doesn't exist
-                            $targetFileDir = Split-Path $targetFilePath -Parent
-                            if (-not (Test-Path $targetFileDir)) {
-                                Write-Log "Creating directory: $targetFileDir" -Level "INFO"
-                                New-Item -ItemType Directory -Path $targetFileDir -Force | Out-Null
-                            }
-                            
-                            Copy-Item $sourceFilePath $targetFilePath -Force
-                            Write-Log "Copied $sourceFile to $targetFilePath" -Level "INFO"
-                        }
-                        else {
-                            Write-Log "Warning: Source file not found: $sourceFilePath" -Level "WARN"
-                        }
+                    # Replace variables in file names
+                    if ($config.colorscheme) {
+                        $sourceFile = $sourceFile.Replace('{colorscheme}', $config.colorscheme)
+                        $targetFile = $targetFile.Replace('{colorscheme}', $config.colorscheme)
                     }
-                }
-                else {
-                    # Default copy behavior
-                    $copyMode = $handler.CopyMode ?? $config.type
-                    if ($copyMode -eq 'directory') {
-                        if (Test-Path $targetPath) {
-                            Remove-Item $targetPath -Recurse -Force
+
+                    $sourceFilePath = Join-Path $sourcePath $sourceFile
+                    $targetFilePath = Join-Path $targetPath $targetFile
+
+                    Write-Log "Processing file: $sourceFile -> $targetFile" -Level "DEBUG"
+                    
+                    if (Test-Path $sourceFilePath) {
+                        # Create target directory if it doesn't exist
+                        $targetFileDir = Split-Path $targetFilePath -Parent
+                        if (-not (Test-Path $targetFileDir)) {
+                            Write-Log "Creating directory: $targetFileDir" -Level "INFO"
+                            New-Item -ItemType Directory -Path $targetFileDir -Force | Out-Null
                         }
                         
-                        # Create parent directory if needed
-                        $targetParent = Split-Path $targetPath -Parent
-                        if (-not (Test-Path $targetParent)) {
-                            Write-Log "Creating parent directory: $targetParent" -Level "INFO"
-                            New-Item -ItemType Directory -Path $targetParent -Force | Out-Null
-                        }
-                        
-                        Copy-Item $sourcePath $targetPath -Recurse -Force
-                        Write-Log "Copied directory $sourcePath to $targetPath" -Level "INFO"
+                        Copy-Item $sourceFilePath $targetFilePath -Force
+                        Write-Log "Copied $sourceFile to $targetFilePath" -Level "INFO"
+                        $filesCopied++
                     }
                     else {
-                        # Create parent directory if needed
-                        $targetParent = Split-Path $targetPath -Parent
-                        if (-not (Test-Path $targetParent)) {
-                            Write-Log "Creating parent directory: $targetParent" -Level "INFO"
-                            New-Item -ItemType Directory -Path $targetParent -Force | Out-Null
-                        }
-                        
-                        Copy-Item $sourcePath $targetPath -Force
-                        Write-Log "Copied file $sourcePath to $targetPath" -Level "INFO"
+                        Write-Log "Warning: Source file not found: $sourceFilePath" -Level "WARN"
                     }
                 }
-
-                return $true
+                
+                $success = ($filesCopied -gt 0)
             }
-            Verify        = @{
-                Script = {
-                    $targetPath = $config.target
+            else {
+                # Default copy behavior
+                $copyMode = $handler.CopyMode ?? $config.type
+                Write-Log "Using copy mode: $copyMode for $Name" -Level "DEBUG"
+                
+                if ($copyMode -eq 'directory') {
+                    # If target exists, remove it first
+                    if (Test-Path $targetPath) {
+                        Remove-Item $targetPath -Recurse -Force
+                    }
                     
-                    # Basic path verification
-                    if (-not (Test-Path $targetPath)) {
-                        return $false
+                    # Ensure parent directory exists
+                    $targetParent = Split-Path $targetPath -Parent
+                    if (-not (Test-Path $targetParent)) {
+                        New-Item -ItemType Directory -Path $targetParent -Force | Out-Null
                     }
-
-                    # Handler-specific verification
-                    if ($handler.PostInstall.Files) {
-                        foreach ($file in $handler.PostInstall.Files) {
-                            $targetFile = $file.Target
-                            if ($config.colorscheme) {
-                                $targetFile = $targetFile.Replace('{colorscheme}', $config.colorscheme)
-                            }
-                            
-                            $targetFilePath = Join-Path $targetPath $targetFile
-                            if (-not (Test-Path $targetFilePath)) {
-                                return $false
-                            }
-                        }
+                    
+                    Copy-Item $sourcePath $targetPath -Recurse -Force
+                    Write-Log "Copied directory $sourcePath to $targetPath" -Level "INFO"
+                    $success = $true
+                }
+                else {
+                    # Ensure parent directory exists
+                    $targetParent = Split-Path $targetPath -Parent
+                    if (-not (Test-Path $targetParent)) {
+                        New-Item -ItemType Directory -Path $targetParent -Force | Out-Null
                     }
-
+                    
+                    Copy-Item $sourcePath $targetPath -Force
+                    Write-Log "Copied file $sourcePath to $targetPath" -Level "INFO"
+                    $success = $true
+                }
+            }
+            
+            # Verify the installation
+            if ($success) {
+                # Basic verification - check if target exists
+                if (Test-Path $targetPath) {
+                    Write-Log "${Name} configuration installed" -Level "SUCCESS"
                     return $true
                 }
+                else {
+                    Write-Log "Target path not found after installation: $targetPath" -Level "ERROR"
+                    return $false
+                }
+            }
+            else {
+                Write-Log "No files were copied for ${Name}" -Level "ERROR"
+                return $false
             }
         }
-
-        # Install using our standard component installation system
-        $result = Install-Component -Name $installSpec.Name -InstallSpec $installSpec
-        
-        if ($result) {
-            Write-Log "${Name} configuration installed" -Level "SUCCESS"
+        catch {
+            Write-Log "Error during file operations for ${Name}: $_" -Level "ERROR"
+            return $false
         }
-
-        return $result
     }
     catch {
         Write-Log "Failed to initialize dotfile for ${Name}: $_" -Level "ERROR"
+        Write-Log "Stack trace: $($_.ScriptStackTrace)" -Level "DEBUG"
         return $false
     }
 }

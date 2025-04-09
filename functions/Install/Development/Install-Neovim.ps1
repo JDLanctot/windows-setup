@@ -2,10 +2,18 @@ function Install-Neovim {
     [CmdletBinding()]
     param()
 
+    # Check if Neovim is already installed
+    if (Get-Command -Name nvim -ErrorAction SilentlyContinue) {
+        Write-ColorOutput "Neovim is already installed" "Status"
+        
+        # Register as installed
+        Save-InstallationState -Component "Neovim"
+        return $true
+    }
+
     $params = @{
-        Name               = "Neovim"
-        Required           = $true
-        PostInstall        = {
+        Name        = "Neovim"
+        PostInstall = {
             # Add Neovim to Path if not already there
             $neovimPath = "C:\tools\neovim\Neovim\bin"
             $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
@@ -26,5 +34,17 @@ function Install-Neovim {
         }
     }
 
-    return Install-Component @params
+    $installSpec = @{
+        Type        = "default"
+        Required    = $true
+        Name        = "neovim"
+        Alias       = "nvim"
+        PostInstall = $params.PostInstall
+        Verify      = @{
+            Command = "nvim"
+            Script  = $params.CustomVerification
+        }
+    }
+
+    return Install-Component -Name $installSpec.Name -InstallSpec $installSpec
 }
