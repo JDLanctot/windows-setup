@@ -5,6 +5,7 @@ function Install-Chocolatey {
     $params = @{
         Type     = "custom"
         Name     = "Chocolatey"
+        Alias    = "choco"
         # Remove Required parameter to fix the error
         # The Install-Component function will handle this
         CustomInstall = {

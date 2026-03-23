@@ -6,12 +6,9 @@ function Install-Starship {
         Type     = "default"
         Required = $true
         Name     = "starship"
+        Alias    = "starship"
         Verify   = @{
             Command = "starship"
-            Config  = @{
-                Path    = "$env:USERPROFILE\.starship\starship.toml"
-                Pattern = "Invoke-Expression \(&starship init powershell\)"
-            }
         }
     }
 

@@ -1,4 +1,18 @@
+[CmdletBinding()]
+param(
+    [ValidateSet('Minimal', 'Standard', 'Full', 'DataScience', 'WebDevelopment', 'JuliaDevelopment', 'Custom')]
+    [string]$InstallationType
+)
+
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+
+$resolvedInstallationType = $InstallationType
+if ([string]::IsNullOrWhiteSpace($resolvedInstallationType)) {
+    $resolvedInstallationType = $env:WINDOWS_SETUP_PROFILE
+}
+if ([string]::IsNullOrWhiteSpace($resolvedInstallationType)) {
+    $resolvedInstallationType = 'Standard'
+}
 
 # Create temporary directory
 $setupDir = "$env:TEMP\windows-setup"
@@ -24,7 +38,7 @@ Expand-Archive -Path $zipFile -DestinationPath $setupDir -Force
 # Navigate to extracted directory and run install.ps1
 $extractedDir = (Get-ChildItem $setupDir -Directory)[0].FullName
 Set-Location $extractedDir
-& .\install.ps1
+& .\install.ps1 -InstallationType $resolvedInstallationType
 
 # Cleanup
 Set-Location $env:USERPROFILE

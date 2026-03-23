@@ -4,7 +4,7 @@
 [CmdletBinding()]
 param(
     [ValidateSet('Minimal', 'Standard', 'Full', 'DataScience', 'WebDevelopment', 'JuliaDevelopment', 'Custom')]
-    [string]$InstallationType,
+    [string]$InstallationType = 'Standard',
     [switch]$Force,
     [switch]$NoBackup,
     [switch]$Silent,
@@ -252,7 +252,7 @@ try {
     
     # For interactive mode, first determine if we have modules properly loaded and config available
     $config = $null
-    if ($Interactive -or [string]::IsNullOrEmpty($InstallationType)) {
+    if ($Interactive) {
         # Initialize the installation to get config
         $initResult = Start-Installation -Initialize -Silent:$Silent
         $config = $initResult.Config

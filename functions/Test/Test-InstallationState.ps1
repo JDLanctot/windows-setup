@@ -20,19 +20,7 @@ function Test-InstallationState {
             }
 
             "Git" {
-                if (-not (Get-Command -Name git -ErrorAction SilentlyContinue)) {
-                    return $false
-                }
-                # Check Git config
-                $gitEmail = git config --global user.email
-                $gitName = git config --global user.name
-                if (-not ($gitEmail -and $gitName)) {
-                    return $false
-                }
-
-                # Check SSH
-                $sshDir = "$env:USERPROFILE\.ssh"
-                return (Test-Path $sshDir)
+                return $null -ne (Get-Command -Name git -ErrorAction SilentlyContinue)
             }
 
             "Nerd Fonts" {

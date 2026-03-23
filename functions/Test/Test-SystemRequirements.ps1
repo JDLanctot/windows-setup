@@ -1,12 +1,20 @@
 function Test-SystemRequirements {
     Write-Log "Checking system requirements..." -Level "INFO"
 
+    $config = $script:Config
+    if (-not $config) {
+        $configPath = Join-Path $script:CONFIG_ROOT "config.psd1"
+        if (Test-Path $configPath) {
+            $config = Import-PowerShellDataFile -Path $configPath
+        }
+    }
+
     $checks = @(
         @{
             Name  = "PowerShell Version"
             Check = {
                 $currentVersion = $PSVersionTable.PSVersion
-                $requiredVersion = [Version]$Config.MinimumRequirements.PSVersion
+                $requiredVersion = [Version]$config.MinimumRequirements.PSVersion
                 Write-Log "Current PowerShell version: $($currentVersion.ToString())" -Level "INFO"
                 Write-Log "LASTEXITCODE before version check: $LASTEXITCODE" -Level "DEBUG"
                 if ($currentVersion -lt $requiredVersion) {
@@ -20,7 +28,7 @@ function Test-SystemRequirements {
             Name  = "Windows Version"
             Check = {
                 $osVersion = [System.Environment]::OSVersion.Version
-                $requiredVersion = [Version]$Config.MinimumRequirements.WindowsVersion
+                $requiredVersion = [Version]$config.MinimumRequirements.WindowsVersion
                 Write-Log "Current Windows version: $($osVersion.ToString())" -Level "INFO"
 
                 if ($osVersion -lt $requiredVersion) {
@@ -36,8 +44,8 @@ function Test-SystemRequirements {
                 $freeSpace = (Get-PSDrive $systemDrive).Free / 1GB
                 Write-Log "Available disk space: ${freeSpace}GB" -Level "INFO"
 
-                if ($freeSpace -lt $Config.MinimumRequirements.RequiredDiskSpaceGB) {
-                    throw "Insufficient disk space. Required: $($Config.MinimumRequirements.RequiredDiskSpaceGB)GB, Available: ${freeSpace}GB"
+                if ($freeSpace -lt $config.MinimumRequirements.RequiredDiskSpaceGB) {
+                    throw "Insufficient disk space. Required: $($config.MinimumRequirements.RequiredDiskSpaceGB)GB, Available: ${freeSpace}GB"
                 }
                 return $true
             }

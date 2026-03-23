@@ -18,11 +18,30 @@ function Test-Environment {
     }
     
     try {
+        $config = $script:Config
+        if (-not $config) {
+            $configPath = Join-Path $script:CONFIG_ROOT "config.psd1"
+            if (Test-Path $configPath) {
+                $config = Import-PowerShellDataFile -Path $configPath
+            }
+        }
+
+        $minimumRequirements = if ($config -and $config.MinimumRequirements) {
+            $config.MinimumRequirements
+        }
+        else {
+            @{
+                PSVersion           = '5.1'
+                WindowsVersion      = '10.0'
+                RequiredDiskSpaceGB = 10
+            }
+        }
+
         if ($All -or $Requirements) {
             $reqCheck = @{
-                PSVersion      = $PSVersionTable.PSVersion -ge [Version]$Config.MinimumRequirements.PSVersion
-                WindowsVersion = [System.Environment]::OSVersion.Version -ge [Version]$Config.MinimumRequirements.WindowsVersion
-                DiskSpace      = ((Get-PSDrive $env:SystemDrive[0]).Free / 1GB) -ge $Config.MinimumRequirements.RequiredDiskSpaceGB
+                PSVersion      = $PSVersionTable.PSVersion -ge [Version]$minimumRequirements.PSVersion
+                WindowsVersion = [System.Environment]::OSVersion.Version -ge [Version]$minimumRequirements.WindowsVersion
+                DiskSpace      = ((Get-PSDrive $env:SystemDrive[0]).Free / 1GB) -ge $minimumRequirements.RequiredDiskSpaceGB
                 AdminRights    = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
             }
             $results.Details.Requirements = $reqCheck
@@ -47,14 +66,18 @@ function Test-Environment {
             )
             $permCheck = @{}
             foreach ($path in $paths) {
-                $acl = Get-Acl -Path $path
-                $permCheck[$path] = $acl.Access | Where-Object {
-                    $_.IdentityReference.Value -eq "$env:USERDOMAIN\$env:USERNAME" -and
-                    $_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::Modify
+                try {
+                    $probeFile = Join-Path $path ".windows-setup-permission-check.tmp"
+                    Set-Content -Path $probeFile -Value "ok" -ErrorAction Stop
+                    Remove-Item -Path $probeFile -Force -ErrorAction Stop
+                    $permCheck[$path] = $true
+                }
+                catch {
+                    $permCheck[$path] = $false
                 }
             }
             $results.Details.Permissions = $permCheck
-            $results.Success = $results.Success -and (-not ($permCheck.Values -contains $null))
+            $results.Success = $results.Success -and (-not ($permCheck.Values -contains $false))
         }
 
         return $results

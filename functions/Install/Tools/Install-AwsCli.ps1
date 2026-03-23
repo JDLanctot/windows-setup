@@ -1,10 +1,10 @@
-function Install-Conda {
+function Install-AwsCli {
     [CmdletBinding()]
     param()
 
-    $toolConfig = $script:Config.CliTools | Where-Object { $_.Name -eq "Conda" }
+    $toolConfig = $script:Config.CliTools | Where-Object { $_.Name -eq "AwsCli" }
     if (-not $toolConfig) {
-        Write-ColorOutput "Conda configuration not found" "Error"
+        Write-ColorOutput "AwsCli configuration not found" "Error"
         return $false
     }
 

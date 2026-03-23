@@ -34,6 +34,9 @@
         'neovim'    = @{
             CopyMode   = 'directory'
         }
+        'directory' = @{
+            CopyMode   = 'directory'
+        }
         'default'   = @{
             CopyMode   = 'file'
         }
@@ -83,6 +86,18 @@
             'type'    = 'file'
             'handler' = 'default'
         }
+        'flowlauncher' = @{
+            'source'  = '.config\flow-launcher\rosepine.xaml'
+            'target'  = 'AppData\Roaming\FlowLauncher\Themes\rosepine.xaml'
+            'type'    = 'file'
+            'handler' = 'default'
+        }
+        'claudeskills' = @{
+            'source'  = '.claude\skills'
+            'target'  = '.claude\skills'
+            'type'    = 'directory'
+            'handler' = 'directory'
+        }
     }
 
 
@@ -124,10 +139,6 @@
                 Alias    = "starship"
                 Verify   = @{
                     Command = "starship"
-                    Config  = @{
-                        Path    = '{USERPROFILE}\.starship\starship.toml'
-                        Pattern = "Invoke-Expression \(&starship init powershell\)"
-                    }
                 }
             }
         }
@@ -210,14 +221,30 @@
                 Alias    = "zoxide"
                 Verify   = @{
                     Command = "zoxide"
-                    Config  = @{
-                        Pattern = "zoxide init"
-                        Content = '# Zoxide Configuration
-Invoke-Expression (& {
-    $hook = if ($PSVersionTable.PSVersion.Major -lt 6) { ''prompt'' } else { ''pwd'' }
-    (zoxide init --hook $hook powershell | Out-String)
-})'
-                    }
+                }
+            }
+        }
+        @{
+            Name        = "ZenBrowser"
+            InstallSpec = @{
+                Type     = "winget"
+                Required = $false
+                Alias    = "zen"
+                Package  = "Zen-Team.Zen-Browser"
+                Verify   = @{
+                    Command = "zen"
+                }
+            }
+        }
+        @{
+            Name        = "Firefox"
+            InstallSpec = @{
+                Type     = "winget"
+                Required = $false
+                Alias    = "firefox"
+                Package  = "Mozilla.Firefox"
+                Verify   = @{
+                    Command = "firefox"
                 }
             }
         }
@@ -229,12 +256,6 @@ Invoke-Expression (& {
                 Alias    = "fzf"
                 Verify   = @{
                     Command = "fzf"
-                    Config  = @{
-                        Pattern = "PSFzf"
-                        Content = '# PSFzf Configuration
-Import-Module PSFzf
-Set-PsFzfOption -PSReadlineChordProvider ''Ctrl+t'' -PSReadlineChordReverseHistory ''Ctrl+r'''
-                    }
                 }
             }
         }
@@ -334,27 +355,101 @@ Set-PsFzfOption -PSReadlineChordProvider ''Ctrl+t'' -PSReadlineChordReverseHisto
                 Alias    = "nvim"
                 Verify   = @{
                     Command = "nvim"
-                    Config  = @{
-                        Pattern = "Set-Alias.*vim.*nvim"
-                        Content = @"
-# Neovim alias
-Set-Alias vim nvim
-"@
-                    }
                 }
             }
         }
         @{
             Name        = "Conda"
             InstallSpec = @{
-                Type     = "custom"
+                Type     = "default"
                 Required = $true
                 Alias    = "conda"
+                Package  = "miniconda3"
                 Verify   = @{
                     Command = "conda"
-                    Config  = @{
-                        Pattern = "conda initialize"
-                    }
+                }
+            }
+        }
+        @{
+            Name        = "Uv"
+            InstallSpec = @{
+                Type     = "default"
+                Required = $true
+                Alias    = "uv"
+                Package  = "uv"
+                Verify   = @{
+                    Command = "uv"
+                }
+            }
+        }
+        @{
+            Name        = "Ruff"
+            InstallSpec = @{
+                Type     = "custom"
+                Required = $true
+                Alias    = "ruff"
+                Verify   = @{
+                    Command = "ruff"
+                }
+            }
+        }
+        @{
+            Name        = "AwsCli"
+            InstallSpec = @{
+                Type     = "default"
+                Required = $true
+                Alias    = "aws"
+                Package  = "awscli"
+                Verify   = @{
+                    Command = "aws"
+                }
+            }
+        }
+        @{
+            Name        = "Biome"
+            InstallSpec = @{
+                Type     = "npm-global"
+                Required = $true
+                Alias    = "biome"
+                Package  = "@biomejs/biome"
+                Verify   = @{
+                    Command = "biome"
+                }
+            }
+        }
+        @{
+            Name        = "Sst"
+            InstallSpec = @{
+                Type     = "npm-global"
+                Required = $true
+                Alias    = "sst"
+                Package  = "sst"
+                Verify   = @{
+                    Command = "sst"
+                }
+            }
+        }
+        @{
+            Name        = "ClaudeCli"
+            InstallSpec = @{
+                Type     = "npm-global"
+                Required = $true
+                Alias    = "claude"
+                Package  = "@anthropic-ai/claude-code"
+                Verify   = @{
+                    Command = "claude"
+                }
+            }
+        }
+        @{
+            Name        = "OpenCode"
+            InstallSpec = @{
+                Type     = "npm-global"
+                Required = $true
+                Alias    = "opencode"
+                Package  = "opencode-ai"
+                Verify   = @{
+                    Command = "opencode"
                 }
             }
         }
@@ -365,8 +460,6 @@ Set-Alias vim nvim
             Steps    = @(
                 @{ Name = "Chocolatey"; Function = "Install-Chocolatey"; Required = $true }
                 @{ Name = "Git"; Function = "Install-Git"; Required = $true }
-                @{ Name = "PowerShell"; Function = "Install-PowerShell"; Required = $true }
-                @{ Name = "Nerd Fonts"; Function = "Install-NerdFonts"; Required = $true }
             )
             Order    = 1
             Required = $true
@@ -374,17 +467,12 @@ Set-Alias vim nvim
         'Shell'       = @{
             Steps = @(
                 @{ Name = "Starship"; Function = "Install-Starship"; Required = $true }
-                @{ Name = "Alacritty"; Function = "Install-Alacritty"; Required = $true }
-                @{ Name = "GlazeWM"; Function = "Install-GlazeWM"; Required = $false }
             )
             Order = 2
         }
         'Development' = @{
             Steps = @(
                 @{ Name = "Neovim"; Function = "Install-Neovim"; Required = $true }
-                @{ Name = "Node"; Function = "Install-Node"; Required = $true }
-                @{ Name = "Julia"; Function = "Install-Julia"; Required = $true }
-                @{ Name = "Zig"; Function = "Install-Zig"; Required = $true }
             )
             Order = 3
         }
@@ -393,8 +481,15 @@ Set-Alias vim nvim
                 @{ Name = "Eza"; Function = "Install-Eza"; Required = $true }
                 @{ Name = "Zoxide"; Function = "Install-Zoxide"; Required = $true }
                 @{ Name = "Fzf"; Function = "Install-Fzf"; Required = $true }
-                @{ Name = "Ag"; Function = "Install-Ag"; Required = $false }
-                @{ Name = "Bat"; Function = "Install-Bat"; Required = $false }
+                @{ Name = "Ag"; Function = "Install-Ag"; Required = $true }
+                @{ Name = "Bat"; Function = "Install-Bat"; Required = $true }
+                @{ Name = "ClaudeCli"; Function = "Install-ClaudeCli"; Required = $true }
+                @{ Name = "OpenCode"; Function = "Install-OpenCode"; Required = $true }
+            )
+            Order = 4
+        }
+        'Optional'    = @{
+            Steps = @(
                 @{ Name = "Ripgrep"; Function = "Install-Ripgrep"; Required = $true }
                 @{ Name = "7zip"; Function = "Install-7zip"; Required = $true }
                 @{ Name = "Unzip"; Function = "Install-Unzip"; Required = $true }
@@ -402,8 +497,22 @@ Set-Alias vim nvim
                 @{ Name = "Wget"; Function = "Install-Wget"; Required = $true }
                 @{ Name = "Fd"; Function = "Install-Fd"; Required = $true }
                 @{ Name = "Conda"; Function = "Install-Conda"; Required = $true }
+                @{ Name = "Uv"; Function = "Install-Uv"; Required = $true }
+                @{ Name = "Ruff"; Function = "Install-Ruff"; Required = $true }
+                @{ Name = "AwsCli"; Function = "Install-AwsCli"; Required = $true }
+                @{ Name = "Biome"; Function = "Install-Biome"; Required = $true }
+                @{ Name = "Sst"; Function = "Install-Sst"; Required = $true }
+                @{ Name = "PowerShell"; Function = "Install-PowerShell"; Required = $true }
+                @{ Name = "Nerd Fonts"; Function = "Install-NerdFonts"; Required = $false }
+                @{ Name = "Alacritty"; Function = "Install-Alacritty"; Required = $false }
+                @{ Name = "GlazeWM"; Function = "Install-GlazeWM"; Required = $false }
+                @{ Name = "FlowLauncher"; Function = "Install-FlowLauncher"; Required = $false }
+                @{ Name = "ZenBrowser"; Function = "Install-ZenBrowser"; Required = $false }
+                @{ Name = "Node"; Function = "Install-Node"; Required = $true }
+                @{ Name = "Julia"; Function = "Install-Julia"; Required = $false }
+                @{ Name = "Zig"; Function = "Install-Zig"; Required = $true }
             )
-            Order = 4
+            Order = 5
         }
         # New bundles
         'DeepLearning' = @{
@@ -444,14 +553,14 @@ Set-Alias vim nvim
                 @{ Name = "Dotfiles"; Function = "Install-Dotfiles"; Required = $true }
             )
             Parallel        = $false
-            ParallelGroups  = @('Development', 'Tools')
+            ParallelGroups  = @('Tools')
         }
         Full     = @{
             InheritFrom     = "Standard"
-            Groups          = @('DeepLearning', 'WebDev', 'JuliaDev')
+            Groups          = @('Optional', 'DeepLearning', 'WebDev', 'JuliaDev')
             MakeAllRequired = $true
             Parallel        = $false
-            ParallelGroups  = @('Development', 'Tools')
+            ParallelGroups  = @('Development', 'Tools', 'Optional')
         }
         # New specialized profiles
         DataScience = @{
@@ -484,15 +593,15 @@ Set-Alias vim nvim
     }
 
     Dependencies          = @{
-        'neovim'   = @{
-            Requires = @('node', 'git', 'ripgrep', 'unzip', 'gzip', 'wget', 'fd', 'zig')
+        'Neovim'   = @{
+            Requires = @('Git')
             Order    = 1
         }
-        'starship' = @{
+        'Starship' = @{
             Requires = @()
             Order    = 2
         }
-        'node'     = @{
+        'Node'     = @{
             Requires = @()
             Order    = 3
         }

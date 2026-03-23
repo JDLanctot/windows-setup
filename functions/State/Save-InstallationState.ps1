@@ -37,7 +37,7 @@ function Save-InstallationState {
         return $true
     }
     catch {
-        Write-Log "Failed to verify $ComponentName installation" -Level "ERROR"
+        Write-Log "Failed to save installation state for $Component" -Level "ERROR"
         return $false
     }
 }

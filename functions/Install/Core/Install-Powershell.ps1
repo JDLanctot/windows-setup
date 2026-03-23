@@ -13,12 +13,12 @@ function Install-PowerShell {
 
     # Original install logic
     $installSpec = @{
-        Type               = "default"
-        Required           = $true
-        Name               = "powershell-core"
-        CustomVerification = {
-            $hasCommand = Get-Command -Name pwsh -ErrorAction SilentlyContinue
-            return $null -ne $hasCommand
+        Type     = "default"
+        Required = $true
+        Name     = "powershell-core"
+        Alias    = "pwsh"
+        Verify   = @{
+            Command = "pwsh"
         }
     }
 

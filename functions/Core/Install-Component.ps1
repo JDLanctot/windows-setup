@@ -64,7 +64,8 @@ function Install-Component {
             switch ($stepConfig.PackageManager) {
                 'choco' {
                     Write-ColorOutput "Using Chocolatey to install $Name" "Status"
-                    $installArgs = @($Name, '--yes', '--no-progress')
+                    $chocoPackage = if ($InstallSpec.Package) { $InstallSpec.Package } else { $Name }
+                    $installArgs = @($chocoPackage, '--yes', '--no-progress')
                     if ($InstallSpec.InstallArgs) {
                         $installArgs += $InstallSpec.InstallArgs
                     }
