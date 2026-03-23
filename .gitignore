@@ -13,3 +13,4 @@ __pycache__/
 *.swo
 /test-results/
 /coverage/
+/tasks/
