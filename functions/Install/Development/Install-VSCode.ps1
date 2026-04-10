@@ -2,14 +2,21 @@ function Install-VSCode {
     [CmdletBinding()]
     param()
 
-    $installSpec = @{
-        Type     = "default"
-        Required = $true
-        Name     = "vscode"
-        Verify   = @{
-            Command = "code"
+    try {
+        $installSpec = @{
+            Type     = "default"
+            Required = $true
+            Name     = "vscode"
+            Verify   = @{
+                Command = "code"
+            }
         }
-    }
 
-    return Install-Component -Name $installSpec.Name -InstallSpec $installSpec
+        $null = Install-Component -Name $installSpec.Name -InstallSpec $installSpec
+        return Install-VSCodeLatex
+    }
+    catch {
+        Write-ColorOutput "Failed to install VS Code: $_" 'Error'
+        return $false
+    }
 }
