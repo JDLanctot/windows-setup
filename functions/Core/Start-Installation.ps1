@@ -206,6 +206,38 @@ function Start-Installation {
                 }
             }
 
+            # Profiles can inherit overlapping groups (for example Full includes WebDev and JuliaDev,
+            # both of which reference VSCode). Collapse duplicates so summary/results stay accurate.
+            $dedupedSteps = [System.Collections.ArrayList]::new()
+            $seenSteps = @{}
+
+            foreach ($step in $allSteps) {
+                $stepKey = if ($step.Function) {
+                    $step.Function.ToString().ToLowerInvariant()
+                }
+                else {
+                    $step.Name.ToString().ToLowerInvariant()
+                }
+
+                if ($seenSteps.ContainsKey($stepKey)) {
+                    $existingStep = $seenSteps[$stepKey]
+                    $existingStep.Required = ($existingStep.Required -or ($step.Required -eq $true))
+                    if (-not $existingStep.Group -and $step.Group) {
+                        $existingStep.Group = $step.Group
+                    }
+                    if (-not $existingStep.Order -and $step.Order) {
+                        $existingStep.Order = $step.Order
+                    }
+                    Write-Log "Skipping duplicate step: $($step.Name) ($($step.Function))" -Level "DEBUG"
+                    continue
+                }
+
+                $seenSteps[$stepKey] = $step
+                [void]$dedupedSteps.Add($step)
+            }
+
+            $allSteps = $dedupedSteps
+
             # Sort steps - first by dependencies, then by order
             $orderedSteps = $allSteps | Sort-Object { 
                 $step = $_

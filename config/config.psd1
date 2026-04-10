@@ -526,7 +526,7 @@
             Steps = @(
                 @{ Name = "Node"; Function = "Install-Node"; Required = $true }
                 @{ Name = "PNPM"; Function = "Install-PNPM"; Required = $true }
-                @{ Name = "Vscode"; Function = "Install-VSCode"; Required = $true }
+                @{ Name = "VSCode"; Function = "Install-VSCode"; Required = $true }
             )
             Order = 6
             Description = "Web development environment"

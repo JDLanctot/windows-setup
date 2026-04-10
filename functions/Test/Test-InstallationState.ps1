@@ -122,6 +122,22 @@ function Test-InstallationState {
                 return (Test-Path $configPath)
             }
 
+            "FlowLauncher" {
+                $knownExePaths = @(
+                    "$env:LOCALAPPDATA\FlowLauncher\Flow.Launcher.exe",
+                    "$env:ProgramFiles\FlowLauncher\Flow.Launcher.exe"
+                )
+
+                foreach ($path in $knownExePaths) {
+                    if (Test-Path $path) {
+                        return $true
+                    }
+                }
+
+                $versionedPath = Get-ChildItem -Path "$env:LOCALAPPDATA\FlowLauncher" -Filter "Flow.Launcher.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+                return $null -ne $versionedPath
+            }
+
             "Starship" {
                 if (-not (Get-Command -Name starship -ErrorAction SilentlyContinue)) {
                     return $false
