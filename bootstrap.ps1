@@ -16,7 +16,7 @@ function Resolve-InstallationType {
     $validInstallationTypes = @('Minimal', 'Standard', 'Full', 'DataScience', 'WebDevelopment', 'JuliaDevelopment', 'Custom')
 
     $resolvedInstallationType = $RequestedInstallationType
-    if ((-not $WasExplicitlyProvided) -and [string]::IsNullOrWhiteSpace($env:WINDOWS_SETUP_PROFILE) -eq $false) {
+    if ([string]::IsNullOrWhiteSpace($resolvedInstallationType) -and [string]::IsNullOrWhiteSpace($env:WINDOWS_SETUP_PROFILE) -eq $false) {
         $resolvedInstallationType = $env:WINDOWS_SETUP_PROFILE
     }
 
