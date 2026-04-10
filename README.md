@@ -52,4 +52,12 @@ Optional desktop extras in `Full` include:
 - `Flow Launcher` (Chocolatey `flow-launcher`) plus dotfile theme copy to `%APPDATA%\FlowLauncher\Themes\rosepine.xaml`
 - `Zen Browser` (default browser install target in this setup)
 
+VS Code installs now also provision a LaTeX workflow for users who prefer it over Neovim:
+
+- installs `Tectonic` into `C:\Program Files\Tectonic` using the official PowerShell drop script and adds it to user `PATH` if needed
+- installs `SumatraPDF` via Chocolatey
+- installs the `James-Yu.latex-workshop` VS Code extension
+- configures VS Code user settings to build with `tectonic` and view PDFs in `SumatraPDF`
+- configures Sumatra inverse search back into VS Code
+
 Firefox installer support is still present (`Install-Firefox`) but Firefox is no longer included in default profile groups.
