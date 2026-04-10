@@ -1,12 +1,31 @@
 $ENV:STARSHIP_CONFIG = "$HOME\.starship\starship.toml"
 $ENV:STARSHIP_DISTRO = "者 "
-Invoke-Expression (&'C:\Program Files\starship\bin\starship.exe' init powershell)
+if (Get-Command -Name starship -ErrorAction SilentlyContinue) {
+    Invoke-Expression (& starship init powershell)
+}
 
-Invoke-Expression (& { (zoxide init powershell | Out-String) })
+if (Get-Command -Name zoxide -ErrorAction SilentlyContinue) {
+    Invoke-Expression (& { zoxide init powershell | Out-String })
+}
 
-Import-Module PSFzf
-Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
-Set-PsFzfOption -EnableFuzzySort
+if (Get-Module -ListAvailable -Name PSFzf) {
+    Import-Module PSFzf
+    Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+    Set-PsFzfOption -EnableFuzzySort
+}
+
+if (-not (Get-Command -Name __datree_debug -ErrorAction SilentlyContinue)) {
+    function __datree_debug {
+        param([string]$Message)
+    }
+}
+
+if (-not (Get-Command -Name __datree_escapeStringWithSpecialChars -ErrorAction SilentlyContinue)) {
+    function __datree_escapeStringWithSpecialChars {
+        param([string]$Value)
+        return $Value
+    }
+}
 
 # Faster moving
 function .. { Set-Location .. }
@@ -71,6 +90,7 @@ function cltmp {
 
 $env:FZF_DEFAULT_COMMAND = 'ag --hidden --ignore .git -l -g ""'
 
+if (Get-Command -Name datree -ErrorAction SilentlyContinue) {
 Register-ArgumentCompleter -CommandName 'datree' -ScriptBlock {
     param(
             $WordToComplete,
@@ -283,6 +303,7 @@ Register-ArgumentCompleter -CommandName 'datree' -ScriptBlock {
         }
 
     }
+}
 }
 # Import the Chocolatey Profile that contains the necessary code to enable
 # tab-completions to function for `choco`.

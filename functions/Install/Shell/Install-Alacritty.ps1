@@ -16,11 +16,7 @@ function Install-Alacritty {
             foreach ($path in $msiPath) {
                 if (Test-Path $path) {
                     $alacrittyDir = Split-Path $path -Parent
-                    [Environment]::SetEnvironmentVariable(
-                        "Path",
-                        "$([Environment]::GetEnvironmentVariable('Path', 'User'));$alacrittyDir",
-                        "User"
-                    )
+                    Add-PathEntry -PathEntry $alacrittyDir -Scope 'User' | Out-Null
                     return $false
                 }
             }

@@ -6,6 +6,7 @@ function Install-Zig {
         Type        = "default"
         Required    = $true
         Name        = "zig"
+        Alias       = "zig"
         PostInstall = @{
             PathAdd = "C:\ProgramData\chocolatey\bin"
         }

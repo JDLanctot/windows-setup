@@ -1,18 +1,37 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Minimal', 'Standard', 'Full', 'DataScience', 'WebDevelopment', 'JuliaDevelopment', 'Custom')]
+    [AllowNull()]
+    [AllowEmptyString()]
     [string]$InstallationType
 )
 
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 
-$resolvedInstallationType = $InstallationType
-if ([string]::IsNullOrWhiteSpace($resolvedInstallationType)) {
-    $resolvedInstallationType = $env:WINDOWS_SETUP_PROFILE
+function Resolve-InstallationType {
+    param(
+        [string]$RequestedInstallationType,
+        [bool]$WasExplicitlyProvided
+    )
+
+    $validInstallationTypes = @('Minimal', 'Standard', 'Full', 'DataScience', 'WebDevelopment', 'JuliaDevelopment', 'Custom')
+
+    $resolvedInstallationType = $RequestedInstallationType
+    if ((-not $WasExplicitlyProvided) -and [string]::IsNullOrWhiteSpace($env:WINDOWS_SETUP_PROFILE) -eq $false) {
+        $resolvedInstallationType = $env:WINDOWS_SETUP_PROFILE
+    }
+
+    if ([string]::IsNullOrWhiteSpace($resolvedInstallationType)) {
+        $resolvedInstallationType = 'Standard'
+    }
+
+    if ($resolvedInstallationType -notin $validInstallationTypes) {
+        throw "Invalid installation type '$resolvedInstallationType'. Valid values: $($validInstallationTypes -join ', ')"
+    }
+
+    return $resolvedInstallationType
 }
-if ([string]::IsNullOrWhiteSpace($resolvedInstallationType)) {
-    $resolvedInstallationType = 'Standard'
-}
+
+$resolvedInstallationType = Resolve-InstallationType -RequestedInstallationType $InstallationType -WasExplicitlyProvided:$PSBoundParameters.ContainsKey('InstallationType')
 
 # Create temporary directory
 $setupDir = "$env:TEMP\windows-setup"

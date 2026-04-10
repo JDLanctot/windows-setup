@@ -16,13 +16,7 @@ function Install-Neovim {
         PostInstall = {
             # Add Neovim to Path if not already there
             $neovimPath = "C:\tools\neovim\Neovim\bin"
-            $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-            if ($userPath -notlike "*$neovimPath*") {
-                [Environment]::SetEnvironmentVariable(
-                    "Path",
-                    "$userPath;$neovimPath",
-                    "User"
-                )
+            if (Add-PathEntry -PathEntry $neovimPath -Scope 'User') {
                 return $true
             }
             return $true

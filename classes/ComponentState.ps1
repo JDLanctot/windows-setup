@@ -24,7 +24,15 @@ class ComponentState {
     [bool]Save() {
         try {
             if ($this.InstallSpec.Verify.Command) {
-                $alias = $this.InstallSpec.Alias
+                $alias = if ($this.InstallSpec.Alias) {
+                    $this.InstallSpec.Alias
+                }
+                elseif ($this.InstallSpec.Verify.Command) {
+                    $this.InstallSpec.Verify.Command
+                }
+                else {
+                    $this.Name
+                }
                 $this.Version = switch ($alias) {
                     'git' { (git --version).Split(' ')[2] }
                     'nvim' { ((nvim --version)[0] -split ' ')[1] }
@@ -52,7 +60,17 @@ class ComponentState {
             }
 
             # Basic command verification
-            $hasCommand = Get-Command -Name $this.InstallSpec.Alias -ErrorAction SilentlyContinue
+            $commandName = if ($this.InstallSpec.Alias) {
+                $this.InstallSpec.Alias
+            }
+            elseif ($this.InstallSpec.Verify.Command) {
+                $this.InstallSpec.Verify.Command
+            }
+            else {
+                $this.Name
+            }
+
+            $hasCommand = Get-Command -Name $commandName -ErrorAction SilentlyContinue
             if (-not $hasCommand) { return $false }
 
             # Configuration verification if specified

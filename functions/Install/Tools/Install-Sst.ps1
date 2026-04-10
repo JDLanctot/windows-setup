@@ -8,5 +8,5 @@ function Install-Sst {
         return $false
     }
 
-    return Install-Component -Name $toolConfig.InstallSpec.Package -InstallSpec $toolConfig.InstallSpec
+    return Install-Component -Name $toolConfig.Name -InstallSpec $toolConfig.InstallSpec
 }

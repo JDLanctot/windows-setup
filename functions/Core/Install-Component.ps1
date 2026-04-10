@@ -15,6 +15,16 @@ function Install-Component {
     
     while ($attempt -le ($RetryCount + 1)) {  # +1 because first attempt isn't a "retry"
         try {
+            $commandName = if ($InstallSpec.Alias) {
+                $InstallSpec.Alias
+            }
+            elseif ($InstallSpec.Verify -and $InstallSpec.Verify.Command) {
+                $InstallSpec.Verify.Command
+            }
+            else {
+                $Name
+            }
+
             if ($attempt -gt 1) {
                 Write-ColorOutput "Retry attempt $($attempt-1) of $RetryCount for $Name..." "Status"
                 Start-Sleep -Seconds ($RetryDelaySeconds * [Math]::Pow(2, $attempt - 2))  # Exponential backoff
@@ -34,7 +44,7 @@ function Install-Component {
                 $isInstalled = $false
                 
                 # Check if command exists (traditional way)
-                if ($InstallSpec.Alias -and (Get-Command -Name $InstallSpec.Alias -ErrorAction SilentlyContinue)) {
+                if ($commandName -and (Get-Command -Name $commandName -ErrorAction SilentlyContinue)) {
                     $isInstalled = $true
                 }
                 # Use state manager verification if available
@@ -112,9 +122,10 @@ function Install-Component {
                 'npm' {
                     Write-ColorOutput "Using NPM to install $Name" "Status"
                     try {
+                        $packageName = if ($InstallSpec.Package) { $InstallSpec.Package } else { $Name }
                         $installArgs = @('install')
                         if ($stepConfig.InstallArgs) { $installArgs += $stepConfig.InstallArgs }
-                        $installArgs += $Name
+                        $installArgs += $packageName
                         if ($InstallSpec.InstallArgs) { $installArgs += $InstallSpec.InstallArgs }
                         
                         & npm @installArgs
@@ -152,13 +163,7 @@ function Install-Component {
 
                 # Handle PATH additions
                 if ($InstallSpec.PostInstall.PathAdd) {
-                    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-                    if ($userPath -notlike "*$($InstallSpec.PostInstall.PathAdd)*") {
-                        [Environment]::SetEnvironmentVariable(
-                            "Path",
-                            "$userPath;$($InstallSpec.PostInstall.PathAdd)",
-                            "User"
-                        )
+                    if (Add-PathEntry -PathEntry $InstallSpec.PostInstall.PathAdd -Scope 'User') {
                         RefreshPath
                     }
                 }
@@ -183,9 +188,8 @@ function Install-Component {
             # Verification
             $verifyResult = switch ($stepConfig.Verification) {
                 'command' {
-                    $alias = $InstallSpec.Alias
                     Write-ColorOutput "Verifying $Name installation using command check..." "Status"
-                    if (-not (Get-Command -Name $alias -ErrorAction SilentlyContinue)) {
+                    if (-not (Get-Command -Name $commandName -ErrorAction SilentlyContinue)) {
                         throw "$Name command not found after installation"
                     }
                     # Additional configuration verification if specified
