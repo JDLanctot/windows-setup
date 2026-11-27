@@ -19,7 +19,7 @@ function Resolve-Error {
             Category   = $ErrorRecord.CategoryInfo.Category
             StackTrace = $ErrorRecord.ScriptStackTrace
             LineNumber = $ErrorRecord.InvocationInfo.ScriptLineNumber
-            Command    = $ErrorRecord.InvocationInfo.MyCommand
+            Command    = $ErrorRecord.InvocationInfo.MyCommand.Name
             Timestamp  = Get-Date
         }
 
@@ -43,9 +43,6 @@ function Resolve-Error {
                 }
             }
             
-            if (-not $Continue) {
-                throw $ErrorRecord
-            }
         }
         else {
             Write-Log "NON-CRITICAL ERROR: $($errorDetails.Message)" -Level "WARN"
@@ -57,11 +54,14 @@ function Resolve-Error {
             }
         }
 
-        return $errorDetails
     }
     catch {
         # Fallback logging if structured logging fails
         Write-Log "Error processing error handler: $_" -Level "ERROR"
         throw
     }
+    if ($Critical -and -not $Continue) {
+        throw $ErrorRecord
+    }
+    return $errorDetails
 }

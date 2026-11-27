@@ -13,6 +13,7 @@ function Write-ColorOutput {
 
     $level = switch ($Type) {
         "Error" { "ERROR" }
+        "Warning" { "WARN" }
         "Success" { "SUCCESS" }
         "Status" { "INFO" }
         default { "INFO" }

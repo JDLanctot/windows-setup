@@ -27,11 +27,12 @@ function Install-Git {
             New-Item -ItemType Directory -Path $sshDir -Force | Out-Null
         }
 
-        $gitEmail = git config --global user.email 2>$null
-        $gitName = git config --global user.name 2>$null
+        $gitEmail = git config --global --default= --get user.email 2>$null
+        $gitName = git config --global --default= --get user.name 2>$null
         if (-not $gitEmail -or -not $gitName) {
-            Write-ColorOutput "Git is installed but global user.name/user.email are not set." "Warning"
-            Write-ColorOutput "Configure them later with: git config --global user.name \"Your Name\" and git config --global user.email \"you@example.com\"" "Warning"
+            Write-ColorOutput 'Git is installed. You can set your commit identity later with these commands.' 'Warning'
+            Write-ColorOutput 'git config --global user.name "Your Name"' 'Warning'
+            Write-ColorOutput 'git config --global user.email "you@example.com"' 'Warning'
         }
 
         Save-InstallationState -Component "Git" | Out-Null
