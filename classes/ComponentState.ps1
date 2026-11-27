@@ -14,7 +14,17 @@ class ComponentState {
             throw "Component name cannot be null or empty"
         }
         $this.Name = $name
-        $this.InstallSpec = $installSpec
+        # Store verification data only. Installer script blocks carry a PowerShell AST.
+        $config = $installSpec.Verify.Config
+        $this.InstallSpec = @{
+            Alias = $installSpec.Alias
+            Required = [bool]$installSpec.Required
+            RequiresLiveVerification = [bool]($installSpec.RequiresLiveVerification -or $installSpec.Verify.Script -or $config.Check)
+            Verify = @{
+                Command = $installSpec.Verify.Command
+                Config = @{ Path = $config.Path; Pattern = $config.Pattern; Content = $config.Content }
+            }
+        }
         $this.Required = $installSpec.Required
         $this.InstalledDate = Get-Date
         $this.AdditionalData = @{}
@@ -40,7 +50,7 @@ class ComponentState {
                     'starship' { (starship --version).Split(' ')[1] }
                     default { 
                         $cmd = Get-Command -Name $alias -ErrorAction SilentlyContinue
-                        if ($cmd) { $cmd.Version.ToString() } else { "Unknown" }
+                        if ($cmd.Version) { $cmd.Version.ToString() } else { "Unknown" }
                     }
                 }
             }
@@ -54,6 +64,7 @@ class ComponentState {
     
     [bool]Verify() {
         try {
+            if ($this.InstallSpec.RequiresLiveVerification) { return $false }
             if (-not $this.InstallSpec) {
                 Write-Log "No InstallSpec available for verification of $($this.Name)" -Level "DEBUG"
                 return $false
@@ -79,7 +90,7 @@ class ComponentState {
 
                 if ($config.Pattern -and $config.Content) {
                     # Check for configuration in profile
-                    $hasConfig = Test-Path $this.ProfilePath -and 
+                    $hasConfig = (Test-Path $this.ProfilePath) -and
                                 (Select-String -Path $this.ProfilePath -Pattern $config.Pattern -Quiet)
                     if (-not $hasConfig) { return $false }
                 }
@@ -90,17 +101,6 @@ class ComponentState {
                     if (-not $hasPath) { return $false }
                 }
 
-                if ($config.Check) {
-                    # Run custom check
-                    $checkResult = Invoke-Expression $config.Check
-                    if (-not $checkResult) { return $false }
-                }
-            }
-
-            # Custom verification if specified
-            if ($this.InstallSpec.Verify.Script) {
-                $verifyResult = Invoke-Command -ScriptBlock ([ScriptBlock]::Create($this.InstallSpec.Verify.Script))
-                if (-not $verifyResult) { return $false }
             }
 
             return $true

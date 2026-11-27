@@ -16,26 +16,23 @@ function Install-Dotfiles {
             return $false
         }
         
-        $anySuccess = $false
+        $allSucceeded = $true
         if ($script:CONFIG_PATHS) {
             foreach ($configName in $script:CONFIG_PATHS.Keys) {
                 Write-ColorOutput "Installing ${configName} configuration..." "Status"
                 
                 $result = Initialize-Dotfile -Name $configName -TempPath $tempPath
-                if ($result) {
-                    $anySuccess = $true
-                }
-                else {
+                if (-not $result) {
+                    $allSucceeded = $false
                     Write-ColorOutput "Failed to install ${configName} configuration" "Error"
                 }
             }
         } else {
             Write-ColorOutput "No configuration paths defined" "Error"
-            $anySuccess = $false
+            $allSucceeded = $false
         }
         
-        # Return true if at least one configuration was successful
-        return $anySuccess
+        return $allSucceeded
     }
     catch {
         Write-Log "Failed to install dotfiles: $_" -Level "ERROR"

@@ -88,16 +88,11 @@
             'handler' = 'default'
         }
         'flowlauncher' = @{
-            'source'  = '.config\flow-launcher\rosepine.xaml'
-            'target'  = 'AppData\Roaming\FlowLauncher\Themes\rosepine.xaml'
+            'bundled' = $true
+            'source'  = 'flow-launcher\rosepine.xaml'
+            'target'  = 'FlowLauncher\Themes\rosepine.xaml'
             'type'    = 'file'
             'handler' = 'default'
-        }
-        'claudeskills' = @{
-            'source'  = '.claude\skills'
-            'target'  = '.claude\skills'
-            'type'    = 'directory'
-            'handler' = 'directory'
         }
     }
 

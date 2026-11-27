@@ -31,10 +31,7 @@ function Install-FlowLauncher {
                     RefreshPath
                 }
 
-                & choco install flow-launcher --yes --no-progress
-                if ($LASTEXITCODE -ne 0) {
-                    throw "Chocolatey install flow-launcher failed with exit code $LASTEXITCODE"
-                }
+                Invoke-ChocolateyInstall -InstallArgs @('flow-launcher', '--yes', '--no-progress')
             }
 
             $themesPath = "$env:APPDATA\FlowLauncher\Themes"

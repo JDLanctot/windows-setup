@@ -159,6 +159,71 @@ Describe 'Windows setup profile orchestration' {
         } | Should -Throw '*command not found after installation*'
     }
 
+    It 'pauses on Chocolatey exit <code> and completes on a fresh invocation' -ForEach @(
+        @{code=3010}, @{code=1641}, @{code=350}, @{code=1604}
+    ) {
+        $calls = [Collections.Generic.List[int]]::new()
+        $runs = & $module {
+            param($code,$calls)
+            function choco {
+                $calls.Add($code)
+                $global:LASTEXITCODE = $code
+            }
+            function Install-Chocolatey {
+                Invoke-ChocolateyInstall -InstallArgs @('fixture')
+                $true
+            }
+            Start-Installation Minimal -Silent
+            $code = 0
+            Start-Installation Minimal -Silent
+        } $code $calls 6>$null
+        $runs[0].RebootRequired | Should -BeTrue
+        $runs[0].Successful.Count | Should -Be 0
+        $runs[0].Failed.Count | Should -Be 0
+        $runs[0].Pending | Should -Be @('Chocolatey','Git')
+        $runs[1].Successful | Should -Be @('Chocolatey','Git')
+        $calls | Should -Be @($code,0)
+    }
+
+    It 'installs the bundled Flow Launcher theme and has no Claude skills target' {
+        $target = "$TestDrive/theme/rosepine.xaml"
+        & $module {
+            param($target)
+            $null = Initialize-Configuration
+            if ($script:CONFIG_PATHS.ContainsKey('claudeskills')) { throw 'Unexpected skills target' }
+            $script:CONFIG_PATHS.flowlauncher.target = $target
+            Initialize-Dotfile flowlauncher "$TestDrive/absent-clone"
+        } $target 6>$null | Should -BeTrue
+        (Get-FileHash $target).Hash | Should -Be (Get-FileHash "$fixture/config/flow-launcher/rosepine.xaml").Hash
+    }
+
+    It 'persists a verified component with script hooks as plain state data' {
+        & $module {
+            $WarningPreference = 'Stop'
+            $manager = [StateManager]::GetInstance()
+            $spec = @{Alias='Get-Date'; Required=$true; PostInstall={ $true }; Verify=@{Command='Get-Date'; Script={ $true }}}
+            Update-InstallationState -ComponentName 'Get-Date' -InstallSpec $spec -Required:$true | Out-Null
+            $record = ([StateManager]::new($manager.StateFile)).GetComponent('Get-Date')
+            $record.InstallSpec.Alias
+        } 6>$null | Should -Be 'Get-Date'
+    }
+
+    It 'propagates a state write failure without reinstalling the package' {
+        $calls = [Collections.Generic.List[string]]::new()
+        {
+            & $module {
+                param($calls)
+                function choco { $calls.Add('install'); $global:LASTEXITCODE = 0 }
+                function Get-Command { $true }
+                function RefreshPath {}
+                function Update-InstallationState { throw 'fixture state write failed' }
+                $spec = @{Type='default'; Required=$true; Verify=@{Command='example'}}
+                Install-Component Example $spec -Force -RetryDelaySeconds 0
+            } $calls 6>$null
+        } | Should -Throw '*fixture state write failed*'
+        $calls.Count | Should -Be 1
+    }
+
     It 'reloads recorded components after restarting the module' {
         & $module {
             $manager = [StateManager]::GetInstance()

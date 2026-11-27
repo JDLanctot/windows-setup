@@ -127,6 +127,7 @@ function Initialize-Configuration {
             # Process target path
             $targetPath = switch ($key) {
                 'nvim' { Join-Path $env:LOCALAPPDATA $pathConfig.target }
+                'flowlauncher' { Join-Path $env:APPDATA $pathConfig.target }
                 'bat' { Join-Path $env:APPDATA $pathConfig.target }
                 'powershell' { $PROFILE }
                 default { Join-Path $env:USERPROFILE $pathConfig.target }
@@ -134,6 +135,7 @@ function Initialize-Configuration {
 
             $processedPaths[$key] = @{
                 'source'      = $pathConfig.source
+                'bundled'     = [bool]$pathConfig.bundled
                 'target'      = $targetPath
                 'type'        = $pathConfig.type
                 'handler'     = $pathConfig.handler

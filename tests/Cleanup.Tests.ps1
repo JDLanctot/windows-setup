@@ -58,6 +58,13 @@ Describe 'Installer temporary file cleanup' {
         @(Get-ChildItem $env:TEMP -Force).Count | Should -Be 0
     }
 
+    It 'propagates a required dotfile failure even if another copy succeeds' {
+        $script:CONFIG_PATHS = @{good=@{source='a'}; bad=@{source='b'}}
+        function git { $null = New-Item -ItemType Directory $args[-1]; $global:LASTEXITCODE = 0 }
+        function Initialize-Dotfile { param($Name,$TempPath) $Name -eq 'good' }
+        Install-Dotfiles | Should -BeFalse
+    }
+
     It 'removes a partial bootstrap download on failure' {
         Mock Invoke-WebRequest {
             Set-Content $OutFile 'partial download'

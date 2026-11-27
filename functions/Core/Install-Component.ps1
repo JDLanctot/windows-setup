@@ -12,6 +12,7 @@ function Install-Component {
 
     $attempt = 1
     $lastError = $null
+    $savingState = $false
     
     while ($attempt -le ($RetryCount + 1)) {  # +1 because first attempt isn't a "retry"
         try {
@@ -47,7 +48,10 @@ function Install-Component {
                 if ($commandName -and (Get-Command -Name $commandName -ErrorAction SilentlyContinue)) {
                     $isInstalled = $true
                 }
-                # Use state manager verification if available
+                # Evaluate custom checks from the live installer, never from the inventory.
+                elseif ($stepConfig.Verification -eq 'custom' -and $InstallSpec.Verify.Script) {
+                    $isInstalled = Invoke-Command -ScriptBlock ([scriptblock]::Create($InstallSpec.Verify.Script))
+                }
                 elseif ($stepConfig.Verification -ne 'command' -and $stateManager.IsInstalled($Name)) {
                     $isInstalled = $true
                 }
@@ -88,17 +92,11 @@ function Install-Component {
                             RefreshPath
                         }
 
-                        # Capture and log the output from Chocolatey
-                        $chocoOutput = & choco install @installArgs *>&1
-                        Write-Log "Chocolatey output: $($chocoOutput -join "`n")" -Level "DEBUG"
-
-                        if ($LASTEXITCODE -ne 0) {
-                            throw "Chocolatey installation failed with exit code: $LASTEXITCODE`nOutput: $($chocoOutput -join "`n")"
-                        }
-                        
+                        Invoke-ChocolateyInstall -InstallArgs $installArgs
                         $didInstallSomething = $true
                     }
                     catch {
+                        if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
                         Write-ColorOutput "Failed to install $Name via Chocolatey: $_" "Error"
                         throw
                     }
@@ -114,13 +112,16 @@ function Install-Component {
                         }
                         $wingetArgs += '--source', 'winget', '--accept-source-agreements', '--accept-package-agreements'
                         if ($InstallSpec.InstallArgs) { $wingetArgs += $InstallSpec.InstallArgs }
+                        $PSNativeCommandUseErrorActionPreference = $false
                         & winget @wingetArgs | Out-Host
+                        Assert-NoInstallerRestart -Manager WinGet -Code $LASTEXITCODE
                         if ($LASTEXITCODE -ne 0) {
                             throw "Winget installation failed with exit code: $LASTEXITCODE"
                         }
                         $didInstallSomething = $true
                     }
                     catch {
+                        if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
                         Write-ColorOutput "Failed to install $Name via Winget: $_" "Error"
                         throw
                     }
@@ -141,6 +142,7 @@ function Install-Component {
                         $didInstallSomething = $true
                     }
                     catch {
+                        if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
                         Write-ColorOutput "Failed to install $Name via NPM: $_" "Error"
                         throw
                     }
@@ -229,6 +231,7 @@ function Install-Component {
             }
 
             if ($didInstallSomething) {
+                $savingState = $true
                 $null = Update-InstallationState -ComponentName $Name -InstallSpec $InstallSpec -Required:([bool]$InstallSpec.Required)
                 Write-ColorOutput "$Name installation completed" "Success"
                 return $true
@@ -238,6 +241,8 @@ function Install-Component {
             return $false
         }
         catch {
+            if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
+            if ($savingState) { throw }
             $lastError = $_
             
             # Log the error details

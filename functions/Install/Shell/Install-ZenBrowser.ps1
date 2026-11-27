@@ -22,7 +22,9 @@ function Install-ZenBrowser {
         }
 
         Write-ColorOutput "Installing Zen Browser via Winget..." "Status"
+        $PSNativeCommandUseErrorActionPreference = $false
         & winget install --id Zen-Team.Zen-Browser -e --accept-source-agreements --accept-package-agreements
+        Assert-NoInstallerRestart -Manager WinGet -Code $LASTEXITCODE
         if ($LASTEXITCODE -ne 0) {
             throw "Winget install failed with exit code $LASTEXITCODE"
         }
@@ -38,6 +40,7 @@ function Install-ZenBrowser {
         return $true
     }
     catch {
+        if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
         Resolve-Error -ErrorRecord $_ -ComponentName "Zen Browser" -Operation "Installation"
         return $false
     }

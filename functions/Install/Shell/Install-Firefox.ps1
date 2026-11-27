@@ -22,7 +22,9 @@ function Install-Firefox {
         }
 
         Write-ColorOutput "Installing Firefox via Winget..." "Status"
+        $PSNativeCommandUseErrorActionPreference = $false
         & winget install --id Mozilla.Firefox -e --accept-source-agreements --accept-package-agreements
+        Assert-NoInstallerRestart -Manager WinGet -Code $LASTEXITCODE
         if ($LASTEXITCODE -ne 0) {
             throw "Winget install failed with exit code $LASTEXITCODE"
         }
@@ -31,6 +33,7 @@ function Install-Firefox {
         return $true
     }
     catch {
+        if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
         Resolve-Error -ErrorRecord $_ -ComponentName "Firefox" -Operation "Installation"
         return $false
     }

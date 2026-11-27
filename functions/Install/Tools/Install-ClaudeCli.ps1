@@ -13,13 +13,16 @@ function Install-ClaudeCli {
         foreach ($wingetId in $wingetIds) {
             try {
                 Write-ColorOutput "Trying native winget package $wingetId..." "Status"
+                $PSNativeCommandUseErrorActionPreference = $false
                 & winget install --id $wingetId -e --accept-source-agreements --accept-package-agreements
+                Assert-NoInstallerRestart -Manager WinGet -Code $LASTEXITCODE
                 if ($LASTEXITCODE -eq 0 -and (Get-Command -Name claude -ErrorAction SilentlyContinue)) {
                     $nativeInstalled = $true
                     break
                 }
             }
             catch {
+                if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
             }
         }
     }
@@ -29,13 +32,14 @@ function Install-ClaudeCli {
         foreach ($chocoPackage in $chocoPackages) {
             try {
                 Write-ColorOutput "Trying native Chocolatey package $chocoPackage..." "Status"
-                & choco install $chocoPackage --yes --no-progress
-                if ($LASTEXITCODE -eq 0 -and (Get-Command -Name claude -ErrorAction SilentlyContinue)) {
+                Invoke-ChocolateyInstall -InstallArgs @($chocoPackage, '--yes', '--no-progress')
+                if (Get-Command -Name claude -ErrorAction SilentlyContinue) {
                     $nativeInstalled = $true
                     break
                 }
             }
             catch {
+                if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
             }
         }
     }

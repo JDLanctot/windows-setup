@@ -17,7 +17,6 @@ The default `irm` flow is tailored to the Windows subset required by `dotfiles`:
 - `OpenCode CLI` (`opencode`)
 - RTK (`rtk`), GitHub CLI (`gh`), jq and uv
 - Dotfiles bootstrap (PowerShell profile + related config paths)
- - `.claude/skills` synced from dotfiles to `%USERPROFILE%\.claude\skills`
 
 ## Quick Start
 
@@ -50,7 +49,7 @@ It also includes the optional webdev/cloud stack from dotfiles:
 Optional desktop extras in `Full` include:
 
 - `GlazeWM`
-- `Flow Launcher` (Chocolatey `flow-launcher`) plus dotfile theme copy to `%APPDATA%\FlowLauncher\Themes\rosepine.xaml`
+- `Flow Launcher` (Chocolatey `flow-launcher`) plus bundled theme copy to `%APPDATA%\FlowLauncher\Themes\rosepine.xaml`
 - `Zen Browser` (default browser install target in this setup)
 
 VS Code installs now also provision a LaTeX workflow for users who prefer it over Neovim:
@@ -62,6 +61,10 @@ VS Code installs now also provision a LaTeX workflow for users who prefer it ove
 - configures Sumatra inverse search back into VS Code
 
 Firefox installer support is still present (`Install-Firefox`) but Firefox is no longer included in default profile groups.
+
+## Restarting during setup
+
+If an installer reports a required restart, setup pauses. Save your work, restart Windows, then run the bootstrap again in an elevated PowerShell 7 window using the profile shown in the summary. Setup rechecks installed components and continues with the remaining work. For Custom, select the same components again.
 
 ## Testing
 

@@ -40,6 +40,7 @@ function Install-Git {
         return $true
     }
     catch {
+        if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
         Resolve-Error -ErrorRecord $_ `
             -ComponentName "Git Environment" `
             -Operation "Setup" `

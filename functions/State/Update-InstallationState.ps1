@@ -11,11 +11,6 @@ function Update-InstallationState {
     try {
         $stateManager = [StateManager]::GetInstance()
         
-        if ($stateManager.IsInstalled($ComponentName)) {
-            Write-Log "$ComponentName is already installed and verified" -Level "INFO"
-            return $false
-        }
-
         if (-not $InstallSpec) {
             $InstallSpec = @{
                 Required = $Required

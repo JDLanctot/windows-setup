@@ -22,7 +22,8 @@ function Initialize-Dotfile {
         }
 
         # Get source and target paths
-        $sourcePath = Join-Path $TempPath $config.source
+        $sourceRoot = if ($config.bundled) { $script:CONFIG_ROOT } else { $TempPath }
+        $sourcePath = Join-Path $sourceRoot $config.source
         $targetPath = $config.target
         $targetDir = Split-Path $targetPath -Parent
 
@@ -71,7 +72,7 @@ function Initialize-Dotfile {
                             New-Item -ItemType Directory -Path $targetFileDir -Force | Out-Null
                         }
                         
-                        Copy-Item $sourceFilePath $targetFilePath -Force
+                        Copy-Item $sourceFilePath $targetFilePath -Force -ErrorAction Stop
                         Write-Log "Copied $sourceFile to $targetFilePath" -Level "INFO"
                         $filesCopied++
                     }
@@ -80,7 +81,7 @@ function Initialize-Dotfile {
                     }
                 }
                 
-                $success = ($filesCopied -gt 0)
+                $success = ($filesCopied -eq $handler.PostInstall.Files.Count)
             }
             else {
                 # Default copy behavior
@@ -115,7 +116,7 @@ function Initialize-Dotfile {
                         New-Item -ItemType Directory -Path $targetParent -Force | Out-Null
                     }
                     
-                    Copy-Item $sourcePath $targetPath -Force
+                    Copy-Item $sourcePath $targetPath -Force -ErrorAction Stop
                     if ($Name -eq 'powershell') {
                         $helper = Join-Path $script:CONFIG_ROOT 'uv-profile.ps1'
                         Copy-Item -LiteralPath $helper -Destination $targetParent -Force -ErrorAction Stop

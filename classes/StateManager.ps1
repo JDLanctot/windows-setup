@@ -41,11 +41,23 @@ class StateManager {
     }
 
     [void]Save() {
+        $this.WriteState($this.Components, $this.Groups)
+    }
+
+    hidden [void]WriteState([hashtable]$components, [hashtable]$groups) {
         $state = @{
-            Components = $this.Components
-            Groups     = $this.Groups
+            Components = $components
+            Groups     = $groups
         }
-        $state | ConvertTo-Json -Depth 10 | Set-Content $this.StateFile
+        $json = $state | ConvertTo-Json -Depth 10 -WarningAction Stop -ErrorAction Stop
+        $tempFile = "$($this.StateFile).$([guid]::NewGuid()).tmp"
+        try {
+            [IO.File]::WriteAllText($tempFile, $json)
+            [IO.File]::Move($tempFile, $this.StateFile, $true)
+        }
+        finally {
+            [IO.File]::Delete($tempFile)
+        }
     }
 
     [ComponentState]GetComponent([string]$name) {
@@ -59,18 +71,24 @@ class StateManager {
     [bool]AddComponent([ComponentState]$component) {
         try {
             if ($component.Save()) {
-                $this.Components[$component.Name] = $component
+                $nextComponents = $this.Components.Clone()
+                $nextGroups = $this.Groups.Clone()
+                $nextComponents[$component.Name] = $component
                 if ($component.Group) {
-                    if (-not $this.Groups[$component.Group]) {
-                        $this.Groups[$component.Group] = @{
-                            Components = @()
-                        }
+                    $groupData = $nextGroups[$component.Group]
+                    if ($groupData) {
+                        $groupData = $groupData.Clone()
+                    } else {
+                        $groupData = @{ Components = @() }
                     }
-                    if ($this.Groups[$component.Group].Components -notcontains $component.Name) {
-                        $this.Groups[$component.Group].Components += $component.Name
+                    if ($groupData.Components -notcontains $component.Name) {
+                        $groupData.Components += $component.Name
                     }
+                    $nextGroups[$component.Group] = $groupData
                 }
-                $this.Save()
+                $this.WriteState($nextComponents, $nextGroups)
+                $this.Components = $nextComponents
+                $this.Groups = $nextGroups
                 return $true
             }
             return $false

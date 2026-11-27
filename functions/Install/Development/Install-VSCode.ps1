@@ -16,6 +16,7 @@ function Install-VSCode {
         return Install-VSCodeLatex
     }
     catch {
+        if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
         Write-ColorOutput "Failed to install VS Code: $_" 'Error'
         return $false
     }

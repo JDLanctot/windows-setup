@@ -138,6 +138,7 @@ function Install-Tectonic {
         return ($null -ne (Get-Command -Name tectonic -ErrorAction SilentlyContinue)) -or (Test-Path $tectonicExe)
     }
     catch {
+        if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
         Write-ColorOutput "Failed to install Tectonic: $_" 'Error'
         return $false
     }
@@ -154,14 +155,12 @@ function Install-SumatraPDF {
         }
 
         Write-ColorOutput 'Installing SumatraPDF...' 'Status'
-        & choco install sumatrapdf --yes --no-progress
-        if ($LASTEXITCODE -ne 0) {
-            throw "Chocolatey install sumatrapdf failed with exit code $LASTEXITCODE"
-        }
+        Invoke-ChocolateyInstall -InstallArgs @('sumatrapdf', '--yes', '--no-progress')
 
         return $null -ne (Get-SumatraPDFExecutablePath)
     }
     catch {
+        if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
         Write-ColorOutput "Failed to install SumatraPDF: $_" 'Error'
         return $false
     }
@@ -295,6 +294,7 @@ function Install-VSCodeLatex {
         return $true
     }
     catch {
+        if ($_.Exception.Data.Contains('InstallerRestart')) { throw }
         Write-ColorOutput "Failed to configure VS Code LaTeX support: $_" 'Error'
         return $false
     }

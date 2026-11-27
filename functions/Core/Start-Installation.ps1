@@ -34,6 +34,8 @@ function Start-Installation {
         
         # Initialize results tracking
         $results = @{
+            Pending         = @()
+            RebootRequired  = $false
             Total           = 0
             Successful      = [System.Collections.ArrayList]::new()
             Failed          = [System.Collections.ArrayList]::new()
@@ -329,6 +331,13 @@ function Start-Installation {
                 }
             }
             catch {
+                if ($_.Exception.Data.Contains('InstallerRestart')) {
+                    $results.RebootRequired = $true
+                    $results.Pending = @($orderedSteps | Select-Object -Skip ($current - 1) | ForEach-Object { $_.Name })
+                    foreach ($name in $results.Pending) { $results.ComponentStatus[$name] = 'Pending' }
+                    Write-Log "Setup paused at ${stepName}. $($_.Exception.Message)" -Level WARN
+                    break
+                }
                 Write-ColorOutput "Failed to install ${stepName}: $_" "Error"
                 [void]$results.Failed.Add($stepName)
                 $results.ComponentStatus[$stepName] = "Failed"
@@ -367,7 +376,7 @@ function Start-Installation {
         }
 
         # Show final summary
-        Show-InstallationSummary -Results $results
+        Show-InstallationSummary -Results $results -InstallationType $InstallationType
         return $results
     }
     catch {
@@ -439,7 +448,7 @@ function Update-Results {
 
 # Helper function to show installation summary
 function Show-InstallationSummary {
-    param($Results)
+    param($Results, $InstallationType)
     
     Write-Host "`n╔════════════════════════════════════════════════════════════════╗"
     Write-Host "║                      Installation Summary                       ║"
@@ -449,6 +458,14 @@ function Show-InstallationSummary {
     Write-Host "║ Failed:         $($Results.Failed.Count.ToString().PadRight(4)) ║"
     Write-Host "║ Skipped:        $($Results.Skipped.Count.ToString().PadRight(4)) ║"
     Write-Host "╚════════════════════════════════════════════════════════════════╝"
+
+    if ($Results.RebootRequired) {
+        Write-Host "Pending ($($Results.Pending.Count)): $($Results.Pending -join ', ')"
+        Write-Host "Save your work and restart Windows. Open PowerShell 7 as Administrator and run:"
+        Write-Host "`$env:WINDOWS_SETUP_PROFILE = '$InstallationType'"
+        Write-Host 'irm https://raw.githubusercontent.com/JDLanctot/windows-setup/main/bootstrap.ps1 | iex'
+        if ($InstallationType -eq 'Custom') { Write-Host 'Select the same custom components again.' }
+    }
 
     if ($Results.Successful.Count -gt 0) {
         Write-Host "`nSuccessfully Completed:"
