@@ -141,17 +141,7 @@ try {
     
     $envCheck = Test-Environment -Requirements -Permissions
     if (-not $envCheck.Success) {
-        $errorMsg = "Module initialization failed - Environment check failed:`n"
-        foreach ($key in $envCheck.Details.Keys) {
-            $value = $envCheck.Details[$key]
-            if ($value -eq $false) {
-                $errorMsg += "- $key check failed`n"
-            }
-        }
-        if ($envCheck.Errors) {
-            $errorMsg += "Errors:`n" + ($envCheck.Errors -join "`n")
-        }
-        throw $errorMsg
+        throw ("Environment check failed: " + ($envCheck.Errors -join " "))
     }
     
     Initialize-ModuleComponents

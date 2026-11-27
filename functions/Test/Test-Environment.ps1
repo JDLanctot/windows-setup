@@ -31,18 +31,31 @@ function Test-Environment {
         }
         else {
             @{
-                PSVersion           = '5.1'
+                PSVersion           = '7.0'
                 WindowsVersion      = '10.0'
                 RequiredDiskSpaceGB = 10
             }
         }
 
         if ($All -or $Requirements) {
+            $freeGB = (Get-PSDrive -Name ($env:SystemDrive.TrimEnd(':')) -ErrorAction Stop).Free / 1GB
             $reqCheck = @{
                 PSVersion      = $PSVersionTable.PSVersion -ge [Version]$minimumRequirements.PSVersion
                 WindowsVersion = [System.Environment]::OSVersion.Version -ge [Version]$minimumRequirements.WindowsVersion
-                DiskSpace      = ((Get-PSDrive $env:SystemDrive[0]).Free / 1GB) -ge $minimumRequirements.RequiredDiskSpaceGB
+                DiskSpace      = $freeGB -ge $minimumRequirements.RequiredDiskSpaceGB
                 AdminRights    = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+            }
+            if (-not $reqCheck.DiskSpace) {
+                $results.Errors += ("{0} has {1:N2} GB free. Setup requires {2} GB." -f $env:SystemDrive, $freeGB, $minimumRequirements.RequiredDiskSpaceGB)
+            }
+            if (-not $reqCheck.AdminRights) {
+                $results.Errors += "Open PowerShell 7 as Administrator and rerun setup."
+            }
+            if (-not $reqCheck.PSVersion) {
+                $results.Errors += "PowerShell $($PSVersionTable.PSVersion) detected. Setup requires $($minimumRequirements.PSVersion) or later."
+            }
+            if (-not $reqCheck.WindowsVersion) {
+                $results.Errors += "Windows $([Environment]::OSVersion.Version) detected. Setup requires $($minimumRequirements.WindowsVersion) or later."
             }
             $results.Details.Requirements = $reqCheck
             $results.Success = $results.Success -and (-not ($reqCheck.Values -contains $false))
@@ -55,6 +68,7 @@ function Test-Environment {
                 NameResolution = $netCheck.NameResolutionSucceeded
                 PingSucceeded  = $netCheck.PingSucceeded
             }
+            if (-not $netCheck.TcpTestSucceeded) { $results.Errors += "Could not connect to github.com on TCP port 443." }
             $results.Success = $results.Success -and $netCheck.TcpTestSucceeded
         }
 
@@ -73,6 +87,7 @@ function Test-Environment {
                     $permCheck[$path] = $true
                 }
                 catch {
+                    $results.Errors += "Directory permission check failed for '$path': $($_.Exception.Message)"
                     $permCheck[$path] = $false
                 }
             }

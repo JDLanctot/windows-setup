@@ -626,7 +626,7 @@
     }
 
     MinimumRequirements   = @{
-        'PSVersion'           = '5.1'
+        'PSVersion'           = '7.0'
         'WindowsVersion'      = '10.0'
         'RequiredDiskSpaceGB' = 10
     }

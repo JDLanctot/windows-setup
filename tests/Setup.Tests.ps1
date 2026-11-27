@@ -92,6 +92,7 @@ Describe 'Windows setup profile orchestration' {
         ($output -join ' ') | Should -Match 'Installation Summary'
         ($output -join ' ') | Should -Match 'Dotfiles'
         Get-Content "$existing/sentinel" | Should -Be keep
+        @(Get-ChildItem $TestDrive -Directory | Where-Object Name -Match '^windows-setup-[0-9a-f-]{36}$').Count | Should -Be 0
     }
 
     It 'installs <name> by exact package ID, verifies the CLI, and reuses it on rerun' -ForEach @(

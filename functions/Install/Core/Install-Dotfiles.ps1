@@ -9,7 +9,7 @@ function Install-Dotfiles {
 
         # Clone dotfiles repository
         Write-Log "Cloning dotfiles repository to $tempPath" -Level "INFO"
-        git clone https://github.com/JDLanctot/dotfiles.git $tempPath
+        git clone --depth 1 https://github.com/JDLanctot/dotfiles.git $tempPath
         
         if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tempPath)) {
             Write-ColorOutput "Failed to clone dotfiles repository" "Error"

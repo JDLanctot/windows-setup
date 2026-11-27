@@ -13,16 +13,7 @@ function Initialize-Installation {
         # Test environment requirements
         $envCheck = Test-Environment -All
         if (-not $envCheck.Success) {
-            $errorMsg = "Environment check failed:`n"
-            foreach ($key in $envCheck.Details.Keys) {
-                if ($envCheck.Details[$key] -eq $false) {
-                    $errorMsg += "- $key check failed`n"
-                }
-            }
-            if ($envCheck.Errors) {
-                $errorMsg += "Errors:`n" + ($envCheck.Errors -join "`n")
-            }
-            throw $errorMsg
+            throw ("Environment check failed: " + ($envCheck.Errors -join " "))
         }
         
         # Rest of initialization code...
