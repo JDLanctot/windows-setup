@@ -67,7 +67,7 @@ function Test-Environment {
             $permCheck = @{}
             foreach ($path in $paths) {
                 try {
-                    $probeFile = Join-Path $path ".windows-setup-permission-check.tmp"
+                    $probeFile = Join-Path $path (".windows-setup-" + [guid]::NewGuid() + ".tmp")
                     Set-Content -Path $probeFile -Value "ok" -ErrorAction Stop
                     Remove-Item -Path $probeFile -Force -ErrorAction Stop
                     $permCheck[$path] = $true

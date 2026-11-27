@@ -33,37 +33,21 @@ function Resolve-InstallationType {
 
 $resolvedInstallationType = Resolve-InstallationType -RequestedInstallationType $InstallationType -WasExplicitlyProvided:$PSBoundParameters.ContainsKey('InstallationType')
 
-# Create temporary directory
-$setupDir = "$env:TEMP\windows-setup"
-if (Test-Path $setupDir) {
-    try {
-        Remove-Item -Path $setupDir -Recurse -Force -ErrorAction Stop
-    }
-    catch {
-        Write-Host "Warning: Could not remove existing directory. Will try to use it anyway."
-    }
-}
-New-Item -ItemType Directory -Path $setupDir -Force | Out-Null
-
-# Download and extract setup files
-$repo = "JDLanctot/windows-setup"
-$branch = "main"
-$url = "https://github.com/$repo/archive/refs/heads/$branch.zip"
-$zipFile = "$setupDir\windows-setup.zip"
-
-Invoke-WebRequest -Uri $url -OutFile $zipFile
-Expand-Archive -Path $zipFile -DestinationPath $setupDir -Force
-
-# Navigate to extracted directory and run install.ps1
-$extractedDir = (Get-ChildItem $setupDir -Directory)[0].FullName
-Set-Location $extractedDir
-& .\install.ps1 -InstallationType $resolvedInstallationType
-
-# Cleanup
-Set-Location $env:USERPROFILE
+# Keep downloads separate from existing checkouts and simultaneous setup runs.
+$setupDir = Join-Path $env:TEMP ("windows-setup-" + [guid]::NewGuid())
+$null = New-Item -ItemType Directory -Path $setupDir -ErrorAction Stop
 try {
-    Remove-Item -Path $setupDir -Recurse -Force -ErrorAction SilentlyContinue
+    $zipFile = Join-Path $setupDir 'windows-setup.zip'
+    Invoke-WebRequest -Uri 'https://github.com/JDLanctot/windows-setup/archive/refs/heads/main.zip' -OutFile $zipFile -ErrorAction Stop
+    Expand-Archive -LiteralPath $zipFile -DestinationPath $setupDir -ErrorAction Stop
+    $entry = Join-Path $setupDir 'windows-setup-main/install.ps1'
+    if ($resolvedInstallationType -eq 'Custom') {
+        & $entry -InstallationType Custom -Interactive
+    }
+    else {
+        & $entry -InstallationType $resolvedInstallationType
+    }
 }
-catch {
-    Write-Host "Warning: Could not clean up temp directory. You may want to manually delete: $setupDir"
+finally {
+    Remove-Item -LiteralPath $setupDir -Recurse -Force
 }

@@ -1,32 +1,19 @@
-# build.ps1
 [CmdletBinding()]
 param(
     [string]$OutputPath = "./out",
-    [string]$Version = "1.0.0"
+    [version]$Version = "1.0.0"
 )
 
-# Create output directory
-New-Item -ItemType Directory -Force -Path $OutputPath
-
-# Update module version
-$manifestPath = "./WindowsSetup.psd1"
-Update-ModuleManifest -Path $manifestPath -ModuleVersion $Version
-
-# Copy files to output
-$files = @(
-    "WindowsSetup.psd1"
-    "WindowsSetup.psm1"
-    "install.ps1"
-    "README.md"
-    "LICENSE"
+$ErrorActionPreference = 'Stop'
+$null = New-Item -ItemType Directory -Force -Path $OutputPath
+$items = @(
+    'WindowsSetup.psd1', 'WindowsSetup.psm1', 'install.ps1', 'README.md', 'LICENSE',
+    'classes', 'config', 'functions', 'helpers'
 )
-
-foreach ($file in $files) {
-    Copy-Item $file $OutputPath
+foreach ($item in $items) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $item) -Destination $OutputPath -Recurse -Force
 }
 
-# Copy lib directory
-Copy-Item -Path "./lib" -Destination "$OutputPath/lib" -Recurse
-
-# Create module package
-Compress-Archive -Path "$OutputPath/*" -DestinationPath "$OutputPath/WindowsSetup.zip"
+Update-ModuleManifest -Path (Join-Path $OutputPath 'WindowsSetup.psd1') -ModuleVersion $Version
+$paths = foreach ($item in $items) { Join-Path $OutputPath $item }
+Compress-Archive -LiteralPath $paths -DestinationPath (Join-Path $OutputPath 'WindowsSetup.zip') -Force

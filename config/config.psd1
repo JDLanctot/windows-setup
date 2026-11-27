@@ -17,6 +17,7 @@
             Verification   = 'command'
         }
         'custom'     = @{
+            PackageManager = 'custom'
             Verification = 'custom'
             PathRefresh  = $false
         }
@@ -444,12 +445,48 @@
         @{
             Name        = "OpenCode"
             InstallSpec = @{
-                Type     = "npm-global"
+                Type     = "winget"
                 Required = $true
                 Alias    = "opencode"
-                Package  = "opencode-ai"
+                Package  = "Anomaly.OpenCode"
                 Verify   = @{
                     Command = "opencode"
+                }
+            }
+        }
+        @{
+            Name        = "Rtk"
+            InstallSpec = @{
+                Type     = "winget"
+                Required = $true
+                Alias    = "rtk"
+                Package  = "rtk-ai.rtk"
+                Verify   = @{
+                    Command = "rtk"
+                }
+            }
+        }
+        @{
+            Name        = "GitHubCli"
+            InstallSpec = @{
+                Type     = "winget"
+                Required = $true
+                Alias    = "gh"
+                Package  = "GitHub.cli"
+                Verify   = @{
+                    Command = "gh"
+                }
+            }
+        }
+        @{
+            Name        = "Jq"
+            InstallSpec = @{
+                Type     = "winget"
+                Required = $true
+                Alias    = "jq"
+                Package  = "jqlang.jq"
+                Verify   = @{
+                    Command = "jq"
                 }
             }
         }
@@ -472,6 +509,7 @@
         }
         'Development' = @{
             Steps = @(
+                @{ Name = "Uv"; Function = "Install-Uv"; Required = $true }
                 @{ Name = "Neovim"; Function = "Install-Neovim"; Required = $true }
             )
             Order = 3
@@ -485,19 +523,21 @@
                 @{ Name = "Bat"; Function = "Install-Bat"; Required = $true }
                 @{ Name = "ClaudeCli"; Function = "Install-ClaudeCli"; Required = $true }
                 @{ Name = "OpenCode"; Function = "Install-OpenCode"; Required = $true }
+                @{ Name = "Rtk"; Function = "Install-Rtk"; Required = $true }
+                @{ Name = "GitHubCli"; Function = "Install-GitHubCli"; Required = $true }
+                @{ Name = "Jq"; Function = "Install-Jq"; Required = $true }
             )
             Order = 4
         }
         'Optional'    = @{
             Steps = @(
+                @{ Name = "Node"; Function = "Install-Node"; Required = $true }
                 @{ Name = "Ripgrep"; Function = "Install-Ripgrep"; Required = $true }
                 @{ Name = "7zip"; Function = "Install-7zip"; Required = $true }
                 @{ Name = "Unzip"; Function = "Install-Unzip"; Required = $true }
                 @{ Name = "Gzip"; Function = "Install-Gzip"; Required = $true }
                 @{ Name = "Wget"; Function = "Install-Wget"; Required = $true }
                 @{ Name = "Fd"; Function = "Install-Fd"; Required = $true }
-                @{ Name = "Conda"; Function = "Install-Conda"; Required = $true }
-                @{ Name = "Uv"; Function = "Install-Uv"; Required = $true }
                 @{ Name = "Ruff"; Function = "Install-Ruff"; Required = $true }
                 @{ Name = "AwsCli"; Function = "Install-AwsCli"; Required = $true }
                 @{ Name = "Biome"; Function = "Install-Biome"; Required = $true }
@@ -508,7 +548,6 @@
                 @{ Name = "GlazeWM"; Function = "Install-GlazeWM"; Required = $false }
                 @{ Name = "FlowLauncher"; Function = "Install-FlowLauncher"; Required = $false }
                 @{ Name = "ZenBrowser"; Function = "Install-ZenBrowser"; Required = $false }
-                @{ Name = "Node"; Function = "Install-Node"; Required = $true }
                 @{ Name = "Julia"; Function = "Install-Julia"; Required = $false }
                 @{ Name = "Zig"; Function = "Install-Zig"; Required = $true }
             )
@@ -517,7 +556,7 @@
         # New bundles
         'DeepLearning' = @{
             Steps = @(
-                @{ Name = "Conda"; Function = "Install-Conda"; Required = $true }
+                @{ Name = "Uv"; Function = "Install-Uv"; Required = $true }
             )
             Order = 5
             Description = "Tools for deep learning and data science"

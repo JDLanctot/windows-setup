@@ -69,7 +69,7 @@ function Select-InstallationMode {
             "Minimal" = "Core tools only (Git, PowerShell)"
             "Standard" = "Development essentials (recommended)"
             "Full" = "Complete development environment"
-            "DataScience" = "Python, Conda, data science tools"
+            "DataScience" = "Python, uv, data science tools"
             "WebDevelopment" = "Node.js, PNPM, web development tools"
             "JuliaDevelopment" = "Julia and related development tools"
         }
@@ -111,7 +111,7 @@ function Select-InstallationMode {
         }
         
         # Add inherited groups if applicable - safely access InheritFrom
-        if ($selectedProfile.PSObject.Properties.Name -contains "InheritFrom" -and $selectedProfile.InheritFrom) {
+        if ($selectedProfile.ContainsKey("InheritFrom") -and $selectedProfile.InheritFrom) {
             $baseProfile = $Config.InstallationProfiles[$selectedProfile.InheritFrom]
             if ($baseProfile -and $baseProfile.Groups) {
                 $includedGroups += $baseProfile.Groups
@@ -139,9 +139,9 @@ function Select-InstallationMode {
         }
         
         # List additional steps
-        if ($selectedProfile.AdditionalSteps) {
+        if ($selectedProfile['AdditionalSteps']) {
             Write-Host "`n  • Additional Components:"
-            foreach ($step in $selectedProfile.AdditionalSteps) {
+            foreach ($step in $selectedProfile['AdditionalSteps']) {
                 $requiredMarker = if ($step.Required) { "[Required] " } else { "" }
                 Write-Host "    - $requiredMarker$($step.Name)"
             }
@@ -168,7 +168,7 @@ function Select-InstallationMode {
                 
                 foreach ($step in $groupConfig.Steps) {
                     $componentName = $step.Name
-                    $isRequired = $step.Required
+                    $isRequired = $groupConfig['Required'] -and $step.Required
                     
                     if ($isRequired) {
                         Write-Host "  [Required] $componentName - will be installed automatically"

@@ -1,7 +1,7 @@
 function Initialize-Installation {
     [CmdletBinding()]
     param(
-        [ValidateSet('Minimal', 'Standard', 'Full')]
+        [ValidateSet('Minimal', 'Standard', 'Full', 'Custom', 'WebDevelopment', 'JuliaDevelopment', 'DataScience')]
         [string]$InstallationType,
         [switch]$Force,
         [hashtable]$State = @{}
@@ -41,14 +41,14 @@ function Initialize-Installation {
         }
         
         Write-Log "Loading configuration..." -Level "DEBUG"
-        Initialize-Configuration
+        $null = Initialize-Configuration
         
         if (-not $script:Config) {
             throw "Configuration failed to load properly"
         }
 
         Write-Log "Initializing cache..." -Level "DEBUG"
-        Initialize-Cache
+        $null = Initialize-Cache
         
         $script:CURRENT_CONFIG = $script:Config
         

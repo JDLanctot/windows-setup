@@ -37,7 +37,7 @@ function Initialize-Configuration {
                 return $newHash
             }
             elseif ($InputObject -is [System.Collections.IList]) {
-                return @($InputObject | ForEach-Object { Update-ConfigValues $_ })
+                return ,@($InputObject | ForEach-Object { Update-ConfigValues $_ })
             }
             elseif ($InputObject -is [string]) {
                 $result = $InputObject
@@ -160,17 +160,10 @@ function Initialize-Configuration {
                         $thisProfile.Groups = $baseProfile.Groups
                     }
                     
-                    # Apply MakeAllRequired if specified
-                    if ($thisProfile.MakeAllRequired) {
-                        foreach ($group in $thisProfile.Groups) {
-                            $groupConfig = $loadedConfig.InstallationGroups[$group]
-                            if ($groupConfig) {
-                                foreach ($step in $groupConfig.Steps) {
-                                    $step.Required = $true
-                                }
-                            }
-                        }
-                    }
+                    $thisProfile.AdditionalSteps = @(
+                        $baseProfile['AdditionalSteps'] | Where-Object { $_ }
+                        $thisProfile['AdditionalSteps'] | Where-Object { $_ }
+                    )
                 }
             }
         }

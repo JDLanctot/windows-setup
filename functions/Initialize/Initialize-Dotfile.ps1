@@ -99,7 +99,12 @@ function Initialize-Dotfile {
                         New-Item -ItemType Directory -Path $targetParent -Force | Out-Null
                     }
                     
-                    Copy-Item $sourcePath $targetPath -Recurse -Force
+                    Copy-Item $sourcePath $targetPath -Recurse -Force -ErrorAction Stop
+                    if ($Name -eq 'nvim') {
+                        $pluginDir = Join-Path $targetPath 'after/plugin'
+                        $null = New-Item -ItemType Directory -Path $pluginDir -Force -ErrorAction Stop
+                        Copy-Item -LiteralPath (Join-Path $script:CONFIG_ROOT 'nvim/after/plugin/windows-locale.lua') -Destination $pluginDir -Force -ErrorAction Stop
+                    }
                     Write-Log "Copied directory $sourcePath to $targetPath" -Level "INFO"
                     $success = $true
                 }
@@ -111,6 +116,11 @@ function Initialize-Dotfile {
                     }
                     
                     Copy-Item $sourcePath $targetPath -Force
+                    if ($Name -eq 'powershell') {
+                        $helper = Join-Path $script:CONFIG_ROOT 'uv-profile.ps1'
+                        Copy-Item -LiteralPath $helper -Destination $targetParent -Force -ErrorAction Stop
+                        Add-Content -LiteralPath $targetPath -Value @('', ". (Join-Path `$PSScriptRoot 'uv-profile.ps1')") -ErrorAction Stop
+                    }
                     Write-Log "Copied file $sourcePath to $targetPath" -Level "INFO"
                     $success = $true
                 }

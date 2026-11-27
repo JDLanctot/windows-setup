@@ -36,16 +36,7 @@ function .... { Set-Location ../../.. }
 function fzn {nvim $(fzf --preview="bat --color=always {}")}
 function fzc {code $(fzf --preview="bat --color=always {}")}
 
-# Conda
-function ca {
-    param([string]$envName)
-    conda activate $envName
-}
-function caz {
-    param([string]$envName)
-    z $envName
-    conda activate $envName
-}
+. (Join-Path $PSScriptRoot 'uv-profile.ps1')
 
 # Enhanced Listing
 function ll {eza -ll}

@@ -48,7 +48,7 @@ function Install-Component {
                     $isInstalled = $true
                 }
                 # Use state manager verification if available
-                elseif ($stateManager.IsInstalled($Name)) {
+                elseif ($stepConfig.Verification -ne 'command' -and $stateManager.IsInstalled($Name)) {
                     $isInstalled = $true
                 }
                 
@@ -106,9 +106,15 @@ function Install-Component {
                 'winget' {
                     Write-ColorOutput "Using Winget to install $Name" "Status"
                     try {
-                        $wingetArgs = @('install', $InstallSpec.Package ?? $Name)
+                        $wingetArgs = @('install')
+                        if ($InstallSpec.Package) {
+                            $wingetArgs += '--id', $InstallSpec.Package, '--exact'
+                        } else {
+                            $wingetArgs += $Name
+                        }
+                        $wingetArgs += '--source', 'winget', '--accept-source-agreements', '--accept-package-agreements'
                         if ($InstallSpec.InstallArgs) { $wingetArgs += $InstallSpec.InstallArgs }
-                        & winget @wingetArgs
+                        & winget @wingetArgs | Out-Host
                         if ($LASTEXITCODE -ne 0) {
                             throw "Winget installation failed with exit code: $LASTEXITCODE"
                         }
@@ -128,7 +134,7 @@ function Install-Component {
                         $installArgs += $packageName
                         if ($InstallSpec.InstallArgs) { $installArgs += $InstallSpec.InstallArgs }
                         
-                        & npm @installArgs
+                        & npm @installArgs | Out-Host
                         if ($LASTEXITCODE -ne 0) {
                             throw "NPM installation failed with exit code: $LASTEXITCODE"
                         }
@@ -158,7 +164,11 @@ function Install-Component {
             }
 
             # Post-installation tasks
-            if ($didInstallSomething -and $InstallSpec.PostInstall) {
+            if ($didInstallSomething -and $InstallSpec.PostInstall -is [scriptblock]) {
+                $postResult = & $InstallSpec.PostInstall | Select-Object -Last 1
+                if ($postResult -ne $true) { throw "Post-installation script failed" }
+            }
+            elseif ($didInstallSomething -and $InstallSpec.PostInstall) {
                 Write-ColorOutput "Running post-installation tasks..." "Status"
 
                 # Handle PATH additions
@@ -195,7 +205,7 @@ function Install-Component {
                     # Additional configuration verification if specified
                     if ($InstallSpec.Verify.Config) {
                         if ($InstallSpec.Verify.Config.Pattern) {
-                            Test-Path $PROFILE -and (Select-String -Path $PROFILE -Pattern $InstallSpec.Verify.Config.Pattern -Quiet)
+                            (Test-Path $PROFILE) -and (Select-String -Path $PROFILE -Pattern $InstallSpec.Verify.Config.Pattern -Quiet)
                         }
                         elseif ($InstallSpec.Verify.Config.Path) {
                             Test-Path $InstallSpec.Verify.Config.Path
@@ -219,7 +229,7 @@ function Install-Component {
             }
 
             if ($didInstallSomething) {
-                Update-InstallationState -ComponentName $Name -InstallSpec $InstallSpec -Required:$InstallSpec.Required
+                $null = Update-InstallationState -ComponentName $Name -InstallSpec $InstallSpec -Required:([bool]$InstallSpec.Required)
                 Write-ColorOutput "$Name installation completed" "Success"
                 return $true
             }

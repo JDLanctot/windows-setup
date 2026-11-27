@@ -8,11 +8,13 @@ function Start-Installation {
         [switch]$Silent,
         [switch]$Interactive,
         [string[]]$CustomComponents,
+        [string]$LogPath,
         [switch]$Initialize
     )
     
     try {
         $script:Silent = $Silent
+        if ($LogPath) { $script:SCRIPT_LOG_PATH = $LogPath }
         
         if (-not $Silent) {
             Write-Host "`n" # Add initial spacing
@@ -59,7 +61,7 @@ function Start-Installation {
                     if (-not $step.Name) { continue }
                     
                     # Include if required or specifically selected
-                    if ($step.Required -or $CustomComponents -contains $step.Name) {
+                    if (($group.Required -and $step.Required) -or $CustomComponents -contains $step.Name) {
                         $componentSpec = @{
                             Name     = $step.Name
                             Function = $step.Function
@@ -84,16 +86,7 @@ function Start-Installation {
                 })
             }
             
-            # Sort steps by dependencies and order
-            $orderedSteps = $allSteps | Sort-Object { 
-                $step = $_
-                $dependency = $configToUse.Dependencies[$step.Name]
-                if ($dependency) {
-                    @($dependency.Requires).Count
-                } else {
-                    0
-                }
-            } | Sort-Object { $_.Order }
+
         }
         else {
             # Get installation profile for predefined types
@@ -201,80 +194,24 @@ function Start-Installation {
                         continue
                     }
                     
-                    [void]$allSteps.Add($step)
+                    [void]$allSteps.Add(@{ Name = $step.Name; Function = $step.Function; Required = $step.Required; Group = 'Additional'; Order = 99 })
                     Write-Log "Added additional step: $($step.Name)" -Level "DEBUG"
                 }
             }
 
-            # Profiles can inherit overlapping groups (for example Full includes WebDev and JuliaDev,
-            # both of which reference VSCode). Collapse duplicates so summary/results stay accurate.
-            $dedupedSteps = [System.Collections.ArrayList]::new()
-            $seenSteps = @{}
+        }
 
-            foreach ($step in $allSteps) {
-                $stepKey = if ($step.Function) {
-                    $step.Function.ToString().ToLowerInvariant()
-                }
-                else {
-                    $step.Name.ToString().ToLowerInvariant()
-                }
-
-                if ($seenSteps.ContainsKey($stepKey)) {
-                    $existingStep = $seenSteps[$stepKey]
-                    $existingStep.Required = ($existingStep.Required -or ($step.Required -eq $true))
-                    if (-not $existingStep.Group -and $step.Group) {
-                        $existingStep.Group = $step.Group
-                    }
-                    if (-not $existingStep.Order -and $step.Order) {
-                        $existingStep.Order = $step.Order
-                    }
-                    Write-Log "Skipping duplicate step: $($step.Name) ($($step.Function))" -Level "DEBUG"
-                    continue
-                }
-
-                $seenSteps[$stepKey] = $step
-                [void]$dedupedSteps.Add($step)
+        # Preserve declaration order within groups and run each installer once.
+        $seen = @{}
+        $orderedSteps = @(foreach ($step in ($allSteps | Sort-Object { $_.Order } -Stable)) {
+            if ($seen.ContainsKey($step.Function)) {
+                $seen[$step.Function].Required = $seen[$step.Function].Required -or $step.Required
             }
-
-            $allSteps = $dedupedSteps
-
-            # Sort steps - first by dependencies, then by order
-            $orderedSteps = $allSteps | Sort-Object { 
-                $step = $_
-                $dependency = $configToUse.Dependencies[$step.Name]
-                if ($dependency) {
-                    @($dependency.Requires).Count
-                } else {
-                    0
-                }
-            } | Sort-Object { $_.Order }
-        }
-
-        # Log ordered steps for debugging
-        Write-Log "Total ordered steps: $($orderedSteps.Count)" -Level "DEBUG"
-        foreach ($step in $orderedSteps) {
-            Write-Log "Ordered step: Name=$($step.Name), Function=$($step.Function), Group=$($step.Group)" -Level "DEBUG"
-        }
-
-        $results.Total = $orderedSteps.Count
-
-        # Sort steps - first by dependencies, then by order
-        $orderedSteps = $allSteps | Sort-Object { 
-            $step = $_
-            $dependency = $configToUse.Dependencies[$step.Name]
-            if ($dependency) {
-                @($dependency.Requires).Count
-            } else {
-                0
+            else {
+                $seen[$step.Function] = $step
+                $step
             }
-        } | Sort-Object { $_.Order }
-
-        # Log ordered steps for debugging
-        Write-Log "Total ordered steps: $($orderedSteps.Count)" -Level "DEBUG"
-        foreach ($step in $orderedSteps) {
-            Write-Log "Ordered step: Name=$($step.Name), Function=$($step.Function), Group=$($step.Group)" -Level "DEBUG"
-        }
-
+        })
         $results.Total = $orderedSteps.Count
 
         # In Start-Installation function
@@ -357,6 +294,7 @@ function Start-Installation {
             }
             
             if (-not $canInstall) {
+                if ($step.Required) { throw "Missing dependency $requiredComp for $stepName" }
                 Write-ColorOutput "Skipping $stepName due to missing dependencies" "Warning"
                 [void]$results.Skipped.Add($stepName)
                 $results.ComponentStatus[$stepName] = "Skipped"
@@ -379,17 +317,15 @@ function Start-Installation {
                 }
                 
                 # Execute the installation function
-                $installResult = & $functionName
+                $installResult = @(& $functionName) | Select-Object -Last 1
                 
                 # Update results
-                if ($installResult -eq $true) {
+                if ($installResult -is [bool] -and $installResult) {
                     [void]$results.Successful.Add($stepName)
                     $results.ComponentStatus[$stepName] = "Installed"
                     Write-ColorOutput "Successfully installed: $stepName" "Success"
                 } else {
-                    [void]$results.Skipped.Add($stepName)
-                    $results.ComponentStatus[$stepName] = "Skipped"
-                    Write-ColorOutput "Skipped installation: $stepName" "Status"
+                    throw "$functionName did not report success"
                 }
             }
             catch {

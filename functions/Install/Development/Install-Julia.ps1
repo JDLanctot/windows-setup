@@ -8,9 +8,6 @@ function Install-Julia {
         Name     = "julia"
         Verify   = @{
             Command = "julia"
-            Config  = @{
-                Path = "$env:USERPROFILE\.julia\config\startup.jl"
-            }
         }
     }
 

@@ -22,14 +22,14 @@ class StateManager {
             
             # Load components
             foreach ($prop in $state.Components.PSObject.Properties) {
-                $component = [ComponentState]::new($prop.Name)
+                $installSpec = $this.ConvertPSObjectToHashtable($prop.Value.InstallSpec)
+                $component = [ComponentState]::new($prop.Name, $installSpec)
                 $component.Version = $prop.Value.Version
                 $component.Path = $prop.Value.Path
                 $component.InstalledDate = [datetime]$prop.Value.InstalledDate
                 $component.AdditionalData = $this.ConvertPSObjectToHashtable($prop.Value.AdditionalData)
                 $component.Required = $prop.Value.Required
                 $component.Group = $prop.Value.Group
-                $component.InstallSpec = $this.ConvertPSObjectToHashtable($prop.Value.InstallSpec)
                 $this.Components[$prop.Name] = $component
             }
 

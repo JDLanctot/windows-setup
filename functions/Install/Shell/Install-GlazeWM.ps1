@@ -15,9 +15,6 @@ function Install-GlazeWM {
         }
         Verify      = @{
             Command = "glazewm"
-            Config  = @{
-                Path = "$env:USERPROFILE\.glzr\glazewm\config.yaml"
-            }
         }
     }
 

@@ -5,16 +5,13 @@ function Install-Dotfiles {
     try {
         Write-ColorOutput "Setting up dotfiles..." "Status"
         
-        $tempPath = Join-Path $env:TEMP "dotfiles"
-        if (Test-Path $tempPath) {
-            Remove-Item $tempPath -Recurse -Force
-        }
+        $tempPath = Join-Path $env:TEMP ("dotfiles-" + [guid]::NewGuid())
 
         # Clone dotfiles repository
         Write-Log "Cloning dotfiles repository to $tempPath" -Level "INFO"
         git clone https://github.com/JDLanctot/dotfiles.git $tempPath
         
-        if (-not (Test-Path $tempPath)) {
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tempPath)) {
             Write-ColorOutput "Failed to clone dotfiles repository" "Error"
             return $false
         }
@@ -37,19 +34,16 @@ function Install-Dotfiles {
             $anySuccess = $false
         }
         
-        # Clean up
-        if (Test-Path $tempPath) {
-            Remove-Item $tempPath -Recurse -Force
-        }
-        
         # Return true if at least one configuration was successful
         return $anySuccess
     }
     catch {
         Write-Log "Failed to install dotfiles: $_" -Level "ERROR"
-        if (Test-Path $tempPath) {
-            Remove-Item $tempPath -Recurse -Force
-        }
         return $false
+    }
+    finally {
+        if ($tempPath -and (Test-Path -LiteralPath $tempPath)) {
+            Remove-Item -LiteralPath $tempPath -Recurse -Force
+        }
     }
 }

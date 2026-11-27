@@ -6,8 +6,7 @@ function Install-Chocolatey {
         Type     = "custom"
         Name     = "Chocolatey"
         Alias    = "choco"
-        # Remove Required parameter to fix the error
-        # The Install-Component function will handle this
+        Required = $true
         CustomInstall = {
             Set-ExecutionPolicy Bypass -Scope Process -Force
             [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072

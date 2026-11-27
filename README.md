@@ -15,6 +15,7 @@ The default `irm` flow is tailored to the Windows subset required by `dotfiles`:
 - `bat`
 - `Claude CLI` (`claude`)
 - `OpenCode CLI` (`opencode`)
+- RTK (`rtk`), GitHub CLI (`gh`), jq and uv
 - Dotfiles bootstrap (PowerShell profile + related config paths)
  - `.claude/skills` synced from dotfiles to `%USERPROFILE%\.claude\skills`
 
@@ -37,7 +38,7 @@ irm https://raw.githubusercontent.com/JDLanctot/windows-setup/main/bootstrap.ps1
 
 You can also run `bootstrap.ps1` directly and pass `-InstallationType`.
 
-`Full` now includes both `Conda` (Chocolatey `miniconda3`) and `uv` (Chocolatey `uv`).
+Standard, Full and DataScience use uv. Run `uv venv` in a project to create `.venv` and activate it with `.\.venv\Scripts\Activate.ps1`. The installed PowerShell profile also provides `ca` to create or activate a project environment and `caz <project>` to jump to a project with zoxide and activate its `.venv`. Conda remains available explicitly through `Install-Conda`.
 
 It also includes the optional webdev/cloud stack from dotfiles:
 
@@ -61,3 +62,7 @@ VS Code installs now also provision a LaTeX workflow for users who prefer it ove
 - configures Sumatra inverse search back into VS Code
 
 Firefox installer support is still present (`Install-Firefox`) but Firefox is no longer included in default profile groups.
+
+## Testing
+
+From PowerShell 7 with Pester 5 installed, run `Invoke-Pester ./tests -Output Detailed`. The suite uses a temporary module copy, a local bootstrap archive and simulated package managers. It exercises profile selection, component ordering, failure reporting, CLI verification, state reload and file copying without applying a setup profile to the host.
